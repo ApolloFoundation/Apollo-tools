@@ -1,0 +1,29 @@
+Copyright © 2017-2018-2019 Apollo Fintech Limited
+All Rights Reserved
+
+DEFINITIONS:
+“Apollo”: shall mean Apollo Fintech Limited and other subsidiaries legal entities owning the rights to the Software;
+“Apollo Mainnet”: shall mean the fully developed and deployed Apollo blockchain protocol
+“Dapp” or “Decentralized Application”: shall mean any computer application that runs on a distributed computing system;
+“License”: shall have the meaning given at Section 1 below
+“Licensee”: any natural person or legal entity obtaining a copy of the Software;
+“Limited Right to Use”: shall have the meaning given at Section 1 below;
+“Software”: shall mean any copyrightable work licensed under this license.
+
+
+1. LIMITED RIGHT TO USE:
+Apollo with this license grants Licensee, free of charge, the revocable, conditional, limited by purpose, non-assignable, non-exclusive and non-transferable right to use the Software (“License”) according to the limitations and conditions stated below. The License to use the Software is granted to Licensee only for the following limited purposes (“Limited Right to Use”):
+a. Developing a Decentralized Application that exists and is powered by the Apollo Mainnet
+b. Create a Token or sidechain that exists on top of the Apollo Mainnet 
+c. Developing any integration on any platform of APL coin or integrations of a token or sidechain that was created on and powered by the Apollo Mainnet
+d. Developing any integration of a Dapp on any platform that is powered by the Apollo Mainnet.
+
+2. CONDITIONS
+The License granted to Licensee is subject to the following conditions:
+a. The above copyright notice and this permission notice shall be included in all distributed copies of the Software or any other work derived from the Limited Right to Use of the Software.
+b. The use of the Software shall be limited to the Limited Right to Use restrictions stated at Section 1.
+
+3. EXCLUSION OF WARRANTY
+IF NOT AGREED DIFFRENTLY IN WRITING BETWEEN APOLLO AND THE LICENSEE THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL APOLLO OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+In the case you or the legal entity you represent wishes to use the Software for purposes that go beyond the Limited Right to Use, please contact Apollo at: licensing@apollocurrency.com.
