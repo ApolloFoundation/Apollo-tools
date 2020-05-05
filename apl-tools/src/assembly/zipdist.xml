@@ -32,7 +32,7 @@
     </fileSet>
     <fileSet>
       <directory>${project.build.directory}/classes/conf/</directory>
-      <outputDirectory>doc</outputDirectory>
+      <outputDirectory>${base-dist-dir}/conf</outputDirectory>
     </fileSet>
 
   </fileSets>
