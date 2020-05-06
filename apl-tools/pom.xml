@@ -3,24 +3,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>com.apollocurrency</groupId>
-    <artifactId>apollo-wallet</artifactId>
-    <version>1.43.1</version>
-  </parent>
-
+  <groupId>com.apollocurrency</groupId>
   <artifactId>apl-tools</artifactId>
   <name>apl-tools</name>
+  <version>1.44.0</version>
   <packaging>jar</packaging>
-  
+
   <properties>
+    <java.version>11</java.version>
     <surefire-plugin.version>2.22.2</surefire-plugin.version>
     <compile-plugin.version>3.8.1</compile-plugin.version>
-    <apl-bom.version>1.43.3</apl-bom.version>    
+    <apl-bom.version>1.44.0</apl-bom.version>
     <base-dist-dir>apollo-wallet</base-dist-dir>
-    <zip-file-name>apollo-tools</zip-file-name>    
+    <zip-file-name>apollo-tools</zip-file-name>
   </properties>
-  
+
   <repositories>
     <!-- arti.firstbridge.work does not chache in apl repo so we have to add Maven Central here -->
     <repository>
@@ -48,7 +45,7 @@
       </snapshots>
     </repository>
   </repositories>
-   <profiles>
+  <profiles>
     <!-- The Configuration of the development profile -->
     <profile>
       <id>dev</id>
@@ -67,7 +64,7 @@
       </properties>
     </profile>
   </profiles>
-  
+
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -79,7 +76,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-      
+
   <dependencies>
 
     <dependency>
@@ -167,6 +164,16 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${compile-plugin.version}</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <forceJavacCompilerUse>true</forceJavacCompilerUse>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
       <plugin>
@@ -206,7 +213,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin> 
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -220,12 +227,13 @@
             <configuration>
               <excludeTypes>zip</excludeTypes>
               <excludeArtifactIds>weld-junit5,weld-junit-common,jsonassert</excludeArtifactIds>
-              <excludeGroupIds>org.junit,org.mockito,org.opentest4j,org.hibernate.javax.persistence</excludeGroupIds>
+              <excludeGroupIds>org.junit,org.mockito,org.opentest4j,org.hibernate.javax.persistence
+              </excludeGroupIds>
               <outputDirectory>${project.build.directory}/lib</outputDirectory>
             </configuration>
           </execution>
         </executions>
-      </plugin>           
+      </plugin>
       <!-- create cross-platform zip distribution -->
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -245,7 +253,7 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>      
+      </plugin>
     </plugins>
   </build>
 </project>
