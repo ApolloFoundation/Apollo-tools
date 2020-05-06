@@ -195,7 +195,7 @@
               <goal>modify</goal>
             </goals>
             <configuration>
-              <file>${basedir}/apl-pkg.json</file>
+              <file>${basedir}/pkg-apollo-tools.json</file>
               <formatter>conventional</formatter>
               <modifications>
                 <modification>
