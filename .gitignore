@@ -33,4 +33,4 @@ nbactions.xml
 /apl-blockchain-secure-storage/
 /apl-blockchain-vault-keystore/
 /trace.db/
-
+**/apl.log
