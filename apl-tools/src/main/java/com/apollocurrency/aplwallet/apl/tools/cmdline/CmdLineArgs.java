@@ -26,9 +26,9 @@ public class CmdLineArgs {
     public boolean help;
     @Parameter(names = {"--ignore-resources"}, description = "Ignore resources bundled with application jar. Default is false")
     public boolean ingnoreResources = false;
-    @Parameter(names = {"--resources-path", "-r"}, description = "Load all resources from specified path. Sytem resources ignored.")
+    @Parameter(names = {"--resources-path", "-r"}, description = "Load all resources from specified path. System resources ignored.")
     public String resourcesPath = "";
-    @Parameter(names = {"--config-dir", "-c"}, description = "Load all configuration and resources from specified path. Sytem resources not ignored, standard config search is ignored.")
+    @Parameter(names = {"--config-dir", "-c"}, description = "Load all configuration and resources from specified path. System resources not ignored, standard config search is ignored.")
     public String configDir = "";
     @Parameter(names = {"--log-dir", "-l"}, description = "Save log files to from specified directory.")
     public String logDir = "";
@@ -38,7 +38,7 @@ public class CmdLineArgs {
     public String vaultKeystoreDir = "";
     @Parameter(names = {"--dex-key-dir"}, description = "Load/Save dex keys to/form specified keystore directory.")
     public String dexKeystoreDir = "";
-    @Parameter(names = {"--testnet", "-t"}, help = true, description = "Connect to testent [1-3] instead of mainnet")
+    @Parameter(names = {"--testnet", "-t"}, help = true, description = "Connect to testnet [1-3] instead of mainnet")
     public int testnetIdx = 0;
 
     public boolean isResourceIgnored() {
