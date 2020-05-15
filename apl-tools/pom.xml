@@ -18,7 +18,7 @@
     <surefire-plugin.version>2.22.2</surefire-plugin.version>
     <compile-plugin.version>3.8.1</compile-plugin.version>
     <apl-bom.version>1.44.1</apl-bom.version>
-    <base-dist-dir>apollo-wallet</base-dist-dir>
+    <base-dist-dir>ApolloWallet</base-dist-dir>
     <zip-file-name>apollo-tools</zip-file-name>
   </properties>
 
