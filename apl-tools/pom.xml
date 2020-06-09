@@ -259,6 +259,37 @@
           </execution>
         </executions>
       </plugin>
+      <!-- calculate SHA-256 sums -->
+      <plugin>
+        <groupId>net.nicoulaj.maven.plugins</groupId>
+        <artifactId>checksum-maven-plugin</artifactId>
+        <version>1.9</version>
+        <executions>
+          <execution>
+            <phase>${zipExecutionPhase}</phase>
+            <goals>
+              <goal>files</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <fileSets>
+            <fileSet>
+              <directory>${project.build.directory}</directory>
+              <includes>
+                <include>${zip-file-name}-NoOS-NoArch-${project.version}.zip</include>
+              </includes>
+            </fileSet>
+          </fileSets>
+          <algorithms>
+            <algorithm>SHA-256</algorithm>
+          </algorithms>
+          <individualFiles>true</individualFiles>
+          <types>
+            <type>zip</type>
+          </types>
+        </configuration>
+      </plugin>    
     </plugins>
   </build>
 </project>
