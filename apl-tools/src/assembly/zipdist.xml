@@ -14,9 +14,9 @@
     </fileSet>
     <fileSet>
       <directory>${project.basedir}</directory>
-      <outputDirectory>./</outputDirectory>
+      <outputDirectory>${base-dist-dir}/..</outputDirectory>
       <includes>
-        <include>pkg-apollo-tools.json</include>
+        <include>packaging/pkg-apollo-tools.json</include>
       </includes>
       <fileMode>0644</fileMode>
     </fileSet>
@@ -42,4 +42,10 @@
       <outputDirectory>${base-dist-dir}/</outputDirectory>
     </file>
   </files>
+  <dependencySets>
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <outputDirectory>${base-dist-dir}/lib</outputDirectory>
+    </dependencySet>
+  </dependencySets>  
 </assembly>

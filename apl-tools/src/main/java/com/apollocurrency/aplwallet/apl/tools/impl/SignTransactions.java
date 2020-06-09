@@ -4,10 +4,10 @@
 
 package com.apollocurrency.aplwallet.apl.tools.impl;
 
+import com.apollocurrency.aplwallet.apl.core.app.AplException.NotValidException;
 import com.apollocurrency.aplwallet.apl.core.app.Transaction;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
-import com.apollocurrency.aplwallet.apl.util.AplException;
 import com.apollocurrency.aplwallet.apl.util.env.PosixExitCodes;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -58,7 +58,7 @@ public final class SignTransactions {
         return PosixExitCodes.OK.exitCode();
     }
 
-    private static String signTransaction(String transactionBytesHexString, byte[] keySeed) throws AplException.NotValidException {
+    private static String signTransaction(String transactionBytesHexString, byte[] keySeed) throws NotValidException {
         byte[] transactionBytes = Convert.parseHexString(transactionBytesHexString);
         Transaction.Builder builder = Transaction.newTransactionBuilder(transactionBytes);
         Transaction transaction = builder.build(keySeed);
@@ -120,7 +120,7 @@ public final class SignTransactions {
         return Crypto.getKeySeed(secret);
     }
 
-    private static String signTransaction(JSONObject transactionJson, byte[] keySeed) throws AplException.NotValidException {
+    private static String signTransaction(JSONObject transactionJson, byte[] keySeed) throws NotValidException {
         Transaction.Builder builder = Transaction.newTransactionBuilder(transactionJson);
         Transaction transaction = builder.build(keySeed);
         return transaction.getJSONObject().toJSONString();

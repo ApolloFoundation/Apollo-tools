@@ -1,7 +1,7 @@
 {
   "name": "apollo-tools",
   "description": "Apollo blockchain tools",
-  "version": "1.45.0",
+  "version": "1.45.1",
   "dependencies": [
     {
       "name": "OpenJDK",
@@ -12,8 +12,8 @@
     {
       "name": "apollo-blockchain",
       "optional": false,
-      "version_min": "1.43.0",
-      "version_max": "1.43.100"
+      "version_min": "1.45.0",
+      "version_max": "1.45.100"
     }
   ]
 }
