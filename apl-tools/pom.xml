@@ -277,7 +277,7 @@
             <fileSet>
               <directory>${project.build.directory}</directory>
               <includes>
-                <include>${zip-file-name}-NoOS-NoArch-${project.version}.zip</include>
+                <include>${zip-file-name}-${project.version}-NoOS-NoArch.zip</include>
               </includes>
             </fileSet>
           </fileSets>
