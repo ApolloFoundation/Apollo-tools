@@ -7,6 +7,7 @@
     {"host": "51.15.242.197" , "schema": "http"},
     {"host": "51.15.218.241" , "schema": "http"},
     {"host": "wallet.testnet3.apollowallet.org" , "schema": "https"},
-    {"host": "51.15.46.49" , "schema": "http"}
+    {"host": "51.15.46.49" , "schema": "http"},
+    {"host": "51.15.102.159" , "schema": "http"}
   ]
 }
