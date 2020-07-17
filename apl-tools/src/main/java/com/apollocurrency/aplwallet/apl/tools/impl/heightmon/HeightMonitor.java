@@ -38,7 +38,7 @@ public class HeightMonitor {
             this.container = AplContainer.builder().containerId("MAIN-APL-CDI")
                 .annotatedDiscoveryMode()
 //                    .recursiveScanPackages(JettyServer.class)
-                .devMode() // enable for dev only
+//                .devMode() // enable for dev only
                 .build();
             HeightMonitorService service = CDI.current().select(HeightMonitorService.class).get();
             CDI.current().select(JettyServer.class).get();
