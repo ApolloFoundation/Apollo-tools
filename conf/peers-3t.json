@@ -1,12 +1,12 @@
 {
   "defaultPort": 7876,
   "peersInfo": [
-    {"host": "51.15.250.32"  , "schema": "http"},
-    {"host": "51.15.253.171" , "schema": "http"},
-    {"host": "51.15.210.116" , "schema": "http"},
-    {"host": "51.15.242.197" , "schema": "http"},
-    {"host": "51.15.218.241" , "schema": "http"},
-    {"host": "wallet.testnet3.apollowallet.org" , "schema": "https"},
+    {"host": "51.15.250.32"  , "schema": "https"},
+    {"host": "51.15.253.171" , "schema": "https"},
+    {"host": "51.15.210.116" , "schema": "https"},
+    {"host": "51.15.242.197" , "schema": "https"},
+    {"host": "51.15.218.241" , "schema": "https"},
+    {"host": "51.15.130.37" , "schema": "https"},
     {"host": "51.15.46.49" , "schema": "http"},
     {"host": "51.15.102.159" , "schema": "http"}
   ]
