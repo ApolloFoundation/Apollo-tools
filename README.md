@@ -9,11 +9,13 @@ The several utility tools are available inside **com.apollocurrency.aplwallet.ap
 1. The 'height monitor'
 The most frequently used tool, see in
 **com.apollocurrency.aplwallet.apl.tools.impl.heightmon.HeightMonitor**
-The configuration files used are in root folder, see: peers.json, peers-1t.json, peers-2t.json, peers-3t.json 
+The configuration files used are in conf folder, see: peers.json, peers-1t.json, peers-2t.json, peers-3t.json 
 
-2. Other less frequently used tools, see code.
+2. RSA encryptor/decryptor (for update package url encryption, used by updater v1 release procedure)
+
+3. Other less frequently used tools (Offline transaction signer, db compact tool, minting service, etc), see code.
 
 ## Necessary software and steps
 1. Code is tested with **JDK 11** and targeted to that platform now. You should have it correctly installed (OpenJDK as example).
 2. First you should Build and Install (into local maven repo) the main 'Apollo' repository because Tools has dependency on 'apl-conf' build by 'Apollo'
-3.
+3. Then 

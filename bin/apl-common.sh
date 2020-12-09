@@ -1,0 +1,106 @@
+#!/bin/bash
+# (C) 2019 Apollo Foundation
+# Common parts for all Apollo scripts
+
+# base dir for data files, etc
+
+MIN_MEMORY_RQ=500m
+JAVA_OPT="${JAVA_OPT} -Xms${MIN_MEMORY_RQ}"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+OS=$(uname)
+if [ $OS == "Linux" ] ; then
+    readlink_opt="-f"
+fi
+
+APL_TOP_DIR=`dirname "$SCRIPT_DIR"`
+ECHO_PREFIX="=== Apollo === "
+echo "${ECHO_PREFIX} Apollo tools installed in directory: ${APL_TOP_DIR}"
+
+APL_LIB_DIR=${APL_TOP_DIR}/lib
+if [ -x "${APL_LIB_DIR}" ]; then
+    echo -n
+else
+    APL_LIB_DIR="${APL_TOP_DIR}"/target/lib
+fi
+echo "${ECHO_PREFIX} Apollo wallet libraries installed in directory: ${APL_LIB_DIR}"
+
+#determine version
+
+if [ -f "${APL_TOP_DIR}"/VERSION ] ; then
+    APL_TOOLS_VERSION=$(cat "${APL_TOP_DIR}"/VERSION)
+else
+    echo "Version of apl-tools was not located"
+    exit 1
+fi
+
+echo "${ECHO_PREFIX} Apollo tools version is: ${APL_TOOLS_VERSION}"
+APL_TOOLS_JAR="${APL_TOP_DIR}"/apl-tools-${APL_TOOLS_VERSION}.jar
+if [ ! -f "${APL_TOOLS_JAR}" ]; then
+    APL_TOOLS_JAR="${APL_TOP_DIR}"/target/apl-tools-${APL_TOOLS_VERSION}.jar
+fi
+if [ ! -f "${APL_TOOLS_JAR}" ]; then
+    echo "Apollo tools jar was not found at standard locations (root directory and target build directory)"
+    exit 2
+fi
+
+echo "${ECHO_PREFIX} Apollo tools jar is located at: ${APL_TOOLS_JAR}"
+# Java detection code. At the moment it is enough just to check jre in distribution
+# or version of system-wide java installation
+if [ -x "${APL_TOP_DIR}"/jre/bin/java ]; then
+    JAVA_CMD="${APL_TOP_DIR}"/jre/bin/java
+else
+  if [[ -n $(type -p java) ]]
+  then
+    JAVA_CMD=java
+  elif [[ ( -n "$JAVA_HOME" ) && ( -x "$JAVA_HOME/bin/java" ) ]]
+  then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+  fi
+    JAVA_CMD=java
+fi
+WJAVACMD=$(which $JAVA_CMD)
+JAVA_BASE=$(dirname "${WJAVACMD}")
+if [ $OS == "Linux" ] ; then
+    JAVA_BASE=$(dirname $(readlink ${readlink_opt} $(which $JAVA_CMD)))
+fi
+
+
+JAR_CMD=$JAVA_BASE/jar
+
+jdk_version() {
+  local result
+  local IFS=$'\n'
+  # remove \r for Cygwin
+  local lines=$("$JAVA_CMD" -Xms32M -Xmx32M -version 2>&1 | tr '\r' '\n')
+  if [[ -z $JAVA_CMD ]]
+  then
+    result=no_java
+  else
+    for line in $lines; do
+      if [[ (-z $result) && ($line = *"version \""*) ]]
+      then
+        local ver=$(echo $line | sed -e 's/.*version "\(.*\)"\(.*\)/\1/; 1q')
+        # on macOS, sed doesn't support '?'
+        if [[ $ver = "1."* ]]
+        then
+          result=$(echo $ver | sed -e 's/1\.\([0-9]*\)\(.*\)/\1/; 1q')
+        else
+          result=$(echo $ver | sed -e 's/\([0-9]*\)\(.*\)/\1/; 1q')
+        fi
+      fi
+    done
+  fi
+  echo "$result"
+}
+
+JAVA_VER="$(jdk_version)"
+
+echo -n "${ECHO_PREFIX} Using java at path: ${JAVA_BASE}; Version is: ${JAVA_VER};"
+
+if [ "$JAVA_VER" -ge 11 ]; then
+  echo " Java is OK."
+else
+    echo
+    echo "${ECHO_PREFIX} WARNING! Java 11 or later is required. Application could not run properly!"
+    JAVA_CMD="echo 'ERROR!!! No suitable JRE found!'"
+fi
