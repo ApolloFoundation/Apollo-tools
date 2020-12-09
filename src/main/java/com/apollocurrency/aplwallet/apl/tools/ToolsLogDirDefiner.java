@@ -4,7 +4,6 @@ import ch.qos.logback.core.PropertyDefinerBase;
 
 import java.nio.file.Paths;
 
-//TODO: is it right to write logs to current dir?
 public class ToolsLogDirDefiner extends PropertyDefinerBase {
     @Override
     public String getPropertyValue() {

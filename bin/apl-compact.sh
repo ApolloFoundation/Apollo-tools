@@ -1,5 +1,5 @@
-#!/bin/sh
-# (C) 2019 Apollo Foundation
+#!/bin/bash
+# (C) 2019-2020 Apollo Foundation
 
 #"***********************************************************************"
 #"* This shell script will compact and reorganize the apl-blockchain db *"
@@ -15,6 +15,6 @@ SCRIPT=`realpath -s $0`
 DIR=`dirname $SCRIPT`
  . ${DIR}/apl-common.sh
 
-${JAVA_CMD}  -jar ${APL_TOOLS_JAR} compactdb
+${JAVA_CMD}  -jar ${APL_TOOLS_JAR} $@ compactdb
 # $@
 exit $?

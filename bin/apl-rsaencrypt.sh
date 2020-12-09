@@ -15,5 +15,5 @@ SCRIPT=`realpath -s $0`
 DIR=`dirname $SCRIPT`
  . ${DIR}/apl-common.sh
 
-${JAVA_CMD}  -jar ${APL_TOOLS_JAR} updaterurl --encrypt --in $1 --out $2
+${JAVA_CMD}  -jar ${APL_TOOLS_JAR} updaterurl $@
 exit $?

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "*********************************************************************"
 echo "* Sign transaction offline and manually                             *"
 echo "* This batch file will sign transaction json stored in file and     *"

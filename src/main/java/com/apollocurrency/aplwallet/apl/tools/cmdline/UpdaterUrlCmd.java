@@ -16,12 +16,12 @@ import java.util.List;
 public class UpdaterUrlCmd {
     public static final String CMD = "updaterurl";
     @Parameter(names = {"--hex", "-x"}, description = "Treat input value for encryption as hexadecimal string")
-    public boolean useHex = true;
+    public boolean useHex = false;
     @Parameter(names = {"--utf", "-u"}, description = "Convert decrypted value to UTF-8 string")
-    public boolean toUtf8 = true;
+    public boolean toUtf8 = false;
     @Parameter(names = {"--decrypt", "-d"}, description = "Decrypt. Default to encrypt")
     public boolean decrypt = false;
-    @Parameter(names = {"--key", "-k"}, description = "Path to private key for decryption or to certificate for encryption", required = true)
+    @Parameter(names = {"--key", "-k"}, description = "Path to private key for encryption or to certificate for decryption", required = true)
     public String keyfile;
     @Parameter(names = {"--in", "-i"}, description = "Input file. Argument string id used if omitted", required = true)
     public String infile;

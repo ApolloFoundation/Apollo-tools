@@ -7,18 +7,26 @@ package com.apollocurrency.aplwallet.apl.tools.impl;
 
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.tools.ApolloTools;
+import com.apollocurrency.aplwallet.apl.updater.UpdaterUtil;
 import com.apollocurrency.aplwallet.apl.updater.decryption.RSAUtil;
 import com.apollocurrency.aplwallet.apl.util.DoubleByteArrayTuple;
 import com.apollocurrency.aplwallet.apl.util.env.PosixExitCodes;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -28,40 +36,27 @@ import java.util.logging.Level;
  *
  * @author al
  */
+@Slf4j
 public class UpdaterUrlUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(ApolloTools.class);
-
     /**
-     * Usage: You can encrypt your message only if you have private key and
-     * message to encrypt which can be passed in two ways: as hexadecimal
-     * representation of bytes or as simple utf-8 message There are two
-     * different ways to encrypt message: 1. Interactive - run this class
-     * without input parameters and follow the instructions 2. With parameters -
-     * run class with parameters For running with parameters you should pass 3
-     * parameters in following order: a) isHexadecimal - boolean flag that
-     * indicates that you want to pass to encryption not the ordinary string,
-     * but hexadecimal b) hexadecimal string of message bytes or just message
-     * depending on option isHexadecimal c) private key path (absolute path is
-     * better) Example: java
-     * com.apollocurrency.aplwallet.apl.tools.RSAEncryption false SecretMessage
-     * C:/user/admin/private.key
+     * RSA Encrypt message by using open private key. Message can be in hexadecimal or utf8 form.
+     * Support encryption of already encrypted by this method message (isHexadecimal should be true)
+     * Output encryption results, exceptions and so on to standard out (console)
+     * @param pkPathString path to private key file (unencrypted)
+     * @param  messageString message to encrypt
+     * @param isHexadecimal whether message is in hexadecimal format or not
+     * @return exit code 0 when encryption is successful, otherwise code is not 0
      */
     public static int encrypt(String pkPathString, String messageString, boolean isHexadecimal) {
         boolean isSecondEncryption = false;
 
-//            System.out.println("Is your message in hexadecimal format ('true' or 'false')");
-//            isHexadecimalString = sc.nextLine();
-//            System.out.println("Enter message: ");
-//            messageString = sc.nextLine().trim();
-//            System.out.println("Enter private key path: ");
-//            pkPathString = sc.nextLine();
         Objects.requireNonNull(pkPathString);
         Objects.requireNonNull(messageString);
 
-        System.out.println("Got private key path " + pkPathString);
-        System.out.println("Got message: \'" + messageString + "\'");
-        System.out.println("Got isHexadecimal: " + isHexadecimal);
+        log.info("Got private key path {}", pkPathString);
+        log.info("Got message: '{}'", messageString);
+        log.info("Got isHexadecimal: {}", isHexadecimal);
 
         byte[] messageBytes;
         if (isHexadecimal) {
@@ -77,14 +72,14 @@ public class UpdaterUrlUtils {
             return PosixExitCodes.EX_IOERR.exitCode();
         }
         if (messageBytes.length > RSAUtil.keyLength(privateKey)) {
-            System.out.println("Cannot encrypt message with size: " + messageBytes.length);
-            System.exit(1);
+            log.error("Cannot encrypt message with size: {}", messageBytes.length);
+            return PosixExitCodes.EX_DATAERR.exitCode();
         }
         if (messageBytes.length == RSAUtil.keyLength(privateKey)) {
             isSecondEncryption = true;
-            System.out.println("Second encryption will be performed");
+            log.debug("Second encryption will be performed");
         } else if (messageBytes.length > RSAUtil.maxEncryptionLength(privateKey)) {
-            System.out.println("Message size is greater than " + RSAUtil.maxEncryptionLength(privateKey) + " bytes. Cannot encrypt.");
+            log.error("Message size is greater than {} bytes. Cannot encrypt.", RSAUtil.maxEncryptionLength(privateKey));
             return PosixExitCodes.EX_DATAERR.exitCode();
         }
         String result;
@@ -108,57 +103,48 @@ public class UpdaterUrlUtils {
             result = Convert.toHexString(encryptedBytes);
         }
 
-        System.out.println("Your encrypted message in hexadecimal format:");
-        System.out.print(result);
+        log.info("Your encrypted message in hexadecimal format: {}", result);
         return PosixExitCodes.OK.exitCode();
     }
 
     /**
-     * Usage: You can decrypt your message only if you have x509 certificate
-     * with public key and hexadecimal string that represents bytes of encrypted
-     * message There are two different ways to decrypt message: 1.Interactive -
-     * run this class without input parameters and follow the instructions 2.
-     * With parameters - run class with parameters For running with parameters
-     * you should pass 3 parameters in following order: a) certificate path
-     * (absolute path is better) b) hexadecimal string of encrypted message
-     * bytes c) boolean flag that indicates that you want to make from decrypted
-     * bytes real message string Example: decrypt( [
-     * C:/user/admin/certificate.pem f4ac4942(another 128, 256, 512 hexadecimal
-     * signs) true] )
+     * Decrypt encrypted message using RSA algorithm and X509 certificate's public key.
+     * Result message can be converted to UTF-8 string (isConvertToString=true).
+     * Can decrypt double encrypted messages (message should consist of two parts separated by ',', ';' or space, tab, etc)
+     * For double decryption two certificates required (should be specified in certificatePathString separated by ',', ';', etc)
+     * Output results to standard out (console) with errors if any.
+     * @param certificatePathString absolute path to X509 certificate, which key is used to decrypt message
+     * @param encryptedMessageString hexadecimal encrypted message string, may contain two encrypted parts separated by ',', ';', etc
+     * @param isConvertToString whether covert result decrypted message to utf-8 string or leave it in hexadecimal format
+     * @return posix code 0, when decryption is successful
      */
     public static int decrypt(String certificatePathString, String encryptedMessageString, boolean isConvertToString) {
 
-//            System.out.println("Enter encrypted message in hexadecimal format. If you want to decrypt double encrypted message separate 512 byte messages with coma or semicolon");
-//            encryptedMessageString = sc.nextLine();
-//            System.out.println("Enter certificate path. If you want to decrypt double encrypted message completely - separate certificate paths with coma or semicolon");
-//            certificatePathString = sc.nextLine();
-//            System.out.println("Do you want to convert bytes to UTF-8 string ('true' or 'false')");
-//            convertToString = sc.nextLine();
         Objects.requireNonNull(certificatePathString);
         Objects.requireNonNull(encryptedMessageString);
 
-        System.out.println("Got public key path " + certificatePathString);
-        System.out.println("Got encrypted message: \'" + encryptedMessageString + "\'");
-        System.out.println("Convert to string: " + isConvertToString);
+        log.info("Got public key path {}", certificatePathString);
+        log.info("Got encrypted message: '{}'", encryptedMessageString);
+        log.info("Convert to string: {}", isConvertToString);
         String[] split = encryptedMessageString.split("([;,]+)|(\\s+)");
         boolean isSplittedMessage = split.length == 2;
         if (split.length > 2 || split.length == 0) {
-            System.out.println("Invalid message string.");
+            log.error("Invalid message string");
             return PosixExitCodes.EX_DATAERR.exitCode();
         }
-        String[] split1 = certificatePathString.split("([;,]+)|(\\s+)");
-        if (split1.length > 2 || split1.length == 0) {
-            System.out.println("Invalid certificate string");
+        String[] certPathSplit = certificatePathString.split("([;,]+)|(\\s+)");
+        if (certPathSplit.length > 2 || certPathSplit.length == 0) {
+            log.error("Invalid certificate string");
             return PosixExitCodes.EX_DATAERR.exitCode();
         }
 
-        boolean isDoubleDecryptionRequired = split1.length == 2;
+        boolean isDoubleDecryptionRequired = certPathSplit.length == 2;
 
         byte[] result;
         PublicKey publicKey1;
         try {
-            publicKey1 = RSAUtil.getPublicKeyFromCertificate(split1[0]);
-        } catch (CertificateException | IOException | URISyntaxException ex) {
+            publicKey1 = readCertificate(certPathSplit[0]).getPublicKey();
+        } catch (CertificateException | IOException ex) {
             log.error("Security exception.", ex);
             return PosixExitCodes.EX_PROTOCOL.exitCode();
         }
@@ -170,7 +156,7 @@ public class UpdaterUrlUtils {
                 byte[] secondMessagePart = Convert.parseHexString(split[1]);
                 DoubleByteArrayTuple encryptedBytes = new DoubleByteArrayTuple(firstMessagePart, secondMessagePart);
                 if (isDoubleDecryptionRequired) {
-                    publicKey2 = RSAUtil.getPublicKeyFromCertificate(split1[1]);
+                    publicKey2 = readCertificate(certPathSplit[1]).getPublicKey();
                     result = RSAUtil.doubleDecrypt(publicKey1, publicKey2, encryptedBytes);
                 } else {
                     result = RSAUtil.firstDecrypt(publicKey1, encryptedBytes);
@@ -178,26 +164,24 @@ public class UpdaterUrlUtils {
             } else {
                 result = RSAUtil.decrypt(publicKey1, Convert.parseHexString(split[0]));
             }
-        } catch (CertificateException ex) {
-            java.util.logging.Logger.getLogger(UpdaterUrlUtils.class.getName()).log(Level.SEVERE, null, ex);
-            return PosixExitCodes.EX_DATAERR.exitCode();
-        } catch (IOException | URISyntaxException | GeneralSecurityException ex) {
-            java.util.logging.Logger.getLogger(UpdaterUrlUtils.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException | GeneralSecurityException ex) {
+            log.error("Error while decryption", ex);
             return PosixExitCodes.EX_DATAERR.exitCode();
         }
 
-        System.out.println("Your decrypted message in hexadecimal format:");
-        System.out.println(Convert.toHexString(result));
+        log.info("Your decrypted message in hexadecimal format:{}", Convert.toHexString(result));
 
         if (isConvertToString) {
-            System.out.println("Result message is:");
-            try {
-                System.out.println(new String(result, "UTF-8"));
-            } catch (UnsupportedEncodingException ex) {
-                log.error("Unsupported Encosing", ex);
-            }
+            log.info("Result message is: {}", new String(result));
         }
         return PosixExitCodes.OK.exitCode();
+    }
+
+    private static Certificate readCertificate(String path) throws CertificateException, IOException {
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        Path certPath = Paths.get(path);
+        return cf.generateCertificate(Files.newInputStream(certPath));
     }
 
 }

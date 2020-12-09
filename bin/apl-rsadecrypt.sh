@@ -9,11 +9,10 @@
 #"* b) hexadecimal string of encrypted message bytes                    *"
 #"* c) boolean flag that indicates that you want to convert decrypted   *"
 #"* bytes real to real UTF-8 string                                     *"
-#"* TODO fix app  launch                                                *"
 #"***********************************************************************"
 SCRIPT=`realpath -s $0`
 DIR=`dirname $SCRIPT`
  . ${DIR}/apl-common.sh
 
-${JAVA_CMD}  -jar ${APL_TOOLS_JAR} updaterurl --decrypt --in $1 --out $2
+${JAVA_CMD}  -jar ${APL_TOOLS_JAR} updaterurl --decrypt $@
 exit $?

@@ -154,7 +154,7 @@ public class ApolloTools {
             jc.usage();
             System.exit(PosixExitCodes.OK.exitCode());
         } else if (jc.getParsedCommand().equalsIgnoreCase(CompactDbCmd.CMD)) {
-            toolsApp.readConfigs(args.testnetIdx);
+            toolsApp.readConfigs(args.netId);
             System.exit(toolsApp.compactDB());
         } else if (jc.getParsedCommand().equalsIgnoreCase(HeightMonitorCmd.CMD)) {
             toolsApp.heightMonitor();
@@ -172,49 +172,40 @@ public class ApolloTools {
 
     }
 
-    private void readConfigs(int netIdx) {
+    private void readConfigs(String netIdx) {
+        int netId = 0;
+        String uidOrPartP = "";
+        try {
+            netId = Integer.parseInt(netIdx);
+        } catch (NumberFormatException e) {
+            uidOrPartP = netIdx;
+        }
         RuntimeEnvironment.getInstance().setMain(ApolloTools.class);
         EnvironmentVariables envVars = new EnvironmentVariables(Constants.APPLICATION_DIR_NAME);
-        ConfigDirProviderFactory.setup(false, Constants.APPLICATION_DIR_NAME, netIdx, "", null);
+        String configDir = StringUtils.isBlank(args.configDir) ? envVars.configDir : args.configDir;
+        ConfigDirProviderFactory.setup(false, Constants.APPLICATION_DIR_NAME, netId, uidOrPartP, configDir);
         ConfigDirProvider configDirProvider = ConfigDirProviderFactory.getConfigDirProvider();
-
+        dirLocations = merge(args, envVars);
+        DirProviderFactory.setup(false, activeChain.getChainId(), Constants.APPLICATION_DIR_NAME, dirLocations);
+        dirProvider = DirProviderFactory.getProvider();
         PropertiesConfigLoader propertiesLoader = new PropertiesConfigLoader(
             configDirProvider,
             args.isResourceIgnored(),
-            StringUtils.isBlank(args.configDir) ? envVars.configDir : args.configDir,
+            configDir,
             SYSTEM_PROPERTY_NAMES);
 
         ChainsConfigLoader chainsConfigLoader = new ChainsConfigLoader(
             configDirProvider,
             args.isResourceIgnored(),
-            StringUtils.isBlank(args.configDir) ? envVars.configDir : args.configDir);
+            configDir);
         chains = chainsConfigLoader.load();
         activeChain = ChainUtils.getActiveChain(chains);
-        // dirProvider = createDirProvider(chains, merge(args, envVars), chainsConfigLoader.);
-        dirLocations = merge(args, envVars);
-        DirProviderFactory.setup(false, activeChain.getChainId(), Constants.APPLICATION_DIR_NAME, dirLocations);
-        dirProvider = DirProviderFactory.getProvider();
         toolsApp.propertiesHolder = new PropertiesHolder();
         toolsApp.propertiesHolder.init(propertiesLoader.load());
         RuntimeEnvironment.getInstance().setDirProvider(dirProvider);
     }
 
     private int compactDB() {
-        if (!compactDb.chainID.isEmpty()) {
-            try {
-                UUID blockchainId = UUID.fromString(compactDb.chainID);
-                Chain c = chains.get(blockchainId);
-                if (c == null) {
-                    System.out.println("Chain not coonfigured: " + compactDb.chainID);
-                    return PosixExitCodes.EX_CONFIG.exitCode();
-                }
-                DirProviderFactory.setup(false, blockchainId, Constants.APPLICATION_DIR_NAME, dirLocations);
-                dirProvider = DirProviderFactory.getProvider();
-            } catch (IllegalArgumentException ex) {
-                System.err.println("Can not convert chain ID " + compactDb.chainID + " to UUID");
-                return PosixExitCodes.EX_CONFIG.exitCode();
-            }
-        }
         CompactDatabase cdb = new CompactDatabase(propertiesHolder, dirProvider);
 
         return cdb.compactDatabase();
@@ -254,12 +245,12 @@ public class ApolloTools {
 
     private int updaterUrlOp() {
         int res;
-            String input;
-            try {
-                input = readFile(urlcmd.infile);
-            } catch (IOException ex) {
-                return PosixExitCodes.EX_OSFILE.exitCode();
-            }
+        String input;
+        try {
+            input = readFile(urlcmd.infile);
+        } catch (IOException ex) {
+            return PosixExitCodes.EX_OSFILE.exitCode();
+        }
         if (urlcmd.decrypt) {
             res = UpdaterUrlUtils.decrypt(urlcmd.keyfile, input, urlcmd.toUtf8);
         } else {

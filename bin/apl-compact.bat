@@ -15,4 +15,4 @@
 set DIRP=%~dp0
 call %DIRP%\apl-common.bat
 @REM start Apollo tools
-%JAVA_CMD% -jar ${APL_TOOLS_JAR} compactdb
+%JAVA_CMD% -jar ${APL_TOOLS_JAR} %* compactdb
