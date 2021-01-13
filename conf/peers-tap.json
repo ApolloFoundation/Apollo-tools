@@ -1,0 +1,9 @@
+{
+  "defaultPort": 7876,
+  "peersInfo": [
+    {"host": "51.15.104.205"  , "schema": "http"},
+    {"host": "51.15.85.92" , "schema": "http"},
+    {"host": "51.15.246.168" , "schema": "http"},
+    {"host": "51.15.249.64" , "schema": "http"}
+  ]
+}
