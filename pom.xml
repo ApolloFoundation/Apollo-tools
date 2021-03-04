@@ -6,7 +6,7 @@
   <groupId>com.apollocurrency</groupId>
   <artifactId>apl-tools</artifactId>
   <name>apl-tools</name>
-  <version>1.47.13</version>
+  <version>1.47.14</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -15,7 +15,7 @@
     <java.version>11</java.version>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
-    <apl-bom.version>1.47.13</apl-bom.version>
+    <apl-bom.version>1.47.14</apl-bom.version>
     <base-dist-dir>ApolloWallet/apollo-tools</base-dist-dir>
     <zip-file-name>apollo-tools</zip-file-name>
   </properties>
