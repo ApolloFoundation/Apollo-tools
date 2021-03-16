@@ -39,7 +39,7 @@ Then go to cloned repository code and run
 	./mvnw clean install
 ```
 
-Final artefact will be assembled in ___tarfet___ directory with name similar to ___apollo-tools-1.47.14-NoOS-NoArch.zip___. Unzip it near to installed Apollo and run by scripts in ___ApolloWallet/apollo-tools/bin___ directory.
+Final artefact will be assembled in ___tarfet___ directory with name similar to ___apollo-tools-1.47.15-NoOS-NoArch.zip___. Unzip it near to installed Apollo and run by scripts in ___ApolloWallet/apollo-tools/bin___ directory.
 
  
 
