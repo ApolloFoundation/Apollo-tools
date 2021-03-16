@@ -85,6 +85,12 @@
     </dependency>
     <dependency>
       <groupId>com.apollocurrency</groupId>
+      <artifactId>apl-core</artifactId>
+      <exclusions>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.apollocurrency</groupId>
       <artifactId>apl-updater</artifactId>
       <exclusions>
         <exclusion>
