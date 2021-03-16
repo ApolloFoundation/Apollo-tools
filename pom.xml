@@ -6,7 +6,7 @@
   <groupId>com.apollocurrency</groupId>
   <artifactId>apl-tools</artifactId>
   <name>apl-tools</name>
-  <version>1.47.5</version>
+  <version>1.48.3</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -100,10 +100,6 @@
           <artifactId>apl-utils</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.apollocurrency</groupId>
-      <artifactId>apl-core</artifactId>
     </dependency>
     <!-- command line arguments processing -->
     <dependency>

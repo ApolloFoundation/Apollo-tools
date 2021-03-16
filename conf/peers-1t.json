@@ -2,8 +2,8 @@
   "defaultPort": 7876,
   "peersInfo": [
     {
-      "host": "51.15.235.41",
-      "schema": "http"
+      "host": "apl-t1-1.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
       "host": "51.15.69.39",

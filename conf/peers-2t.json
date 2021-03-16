@@ -22,8 +22,8 @@
       "schema": "http"
     },
     {
-      "host": "51.15.46.25",
-      "schema": "http"
+      "host": "apl-redesign.testnet2.apollowallet.org",
+      "schema": "https"
     },
     {
       "host": "51.15.72.23",
