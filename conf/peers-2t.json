@@ -3,23 +3,23 @@
   "peersInfo": [
     {
       "host": "51.15.37.165",
-      "schema": "http"
+      "schema": "https"
     },
     {
-      "host": "51.15.228.126",
-      "schema": "http"
+      "host": "apl-t2-2.testnet2.apollowallet.org",
+      "schema": "https"
     },
     {
       "host": "51.15.228.171",
-      "schema": "http"
+      "schema": "https"
     },
     {
       "host": "51.15.209.252",
-      "schema": "http"
+      "schema": "https"
     },
     {
       "host": "51.15.228.90",
-      "schema": "http"
+      "schema": "https"
     },
     {
       "host": "apl-redesign.testnet2.apollowallet.org",
@@ -27,7 +27,7 @@
     },
     {
       "host": "51.15.72.23",
-      "schema": "http"
+      "schema": "https"
     }
   ]
 }
