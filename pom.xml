@@ -6,7 +6,7 @@
   <groupId>com.apollocurrency</groupId>
   <artifactId>apl-tools</artifactId>
   <name>apl-tools</name>
-  <version>1.48.7</version>
+  <version>1.48.8</version>
   <packaging>jar</packaging>
 
   <properties>
