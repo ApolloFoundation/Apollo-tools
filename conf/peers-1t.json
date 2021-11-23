@@ -2,32 +2,32 @@
   "defaultPort": 7876,
   "peersInfo": [
     {
-      "host": "51.15.235.41",
-      "schema": "http"
+      "host": "apl-t1-1.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.69.39",
-      "schema": "http"
+      "host": "apl-t1-2.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.59.37",
-      "schema": "http"
+      "host": "apl-t1-3.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.114.68",
-      "schema": "http"
+      "host": "apl-t1-4.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.140.80",
-      "schema": "http"
+      "host": "apl-t1-5.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.100.44",
-      "schema": "http"
+      "host": "apl-t1-8.testnet.apollowallet.org",
+      "schema": "https"
     },
     {
-      "host": "51.15.233.93",
-      "schema": "http"
+      "host": "apl-t1-9.testnet.apollowallet.org",
+      "schema": "https"
     }
   ]
 }
