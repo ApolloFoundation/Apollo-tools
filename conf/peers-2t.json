@@ -2,7 +2,7 @@
   "defaultPort": 7876,
   "peersInfo": [
     {
-      "host": "51.15.37.165",
+      "host": "apl-t2-1.testnet2.apollowallet.org",
       "schema": "https"
     },
     {
@@ -10,15 +10,16 @@
       "schema": "https"
     },
     {
-      "host": "51.15.228.171",
+      "host": "apl-t2-3.testnet2.apollowallet.org",
       "schema": "https"
     },
     {
-      "host": "51.15.209.252",
+      "host": "apl-t2-4.testnet2.apollowallet.org",
       "schema": "https"
     },
     {
-      "host": "51.15.228.90",
+      "host": "apl-t2-5.testnet2.apollowallet.org",
+
       "schema": "https"
     },
     {
@@ -26,7 +27,7 @@
       "schema": "https"
     },
     {
-      "host": "51.15.72.23",
+      "host": "apl-exchange.testnet.apollowallet.org",
       "schema": "https"
     }
   ]
