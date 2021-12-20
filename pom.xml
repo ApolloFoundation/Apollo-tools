@@ -85,6 +85,12 @@
     </dependency>
     <dependency>
       <groupId>com.apollocurrency</groupId>
+      <artifactId>apl-core</artifactId>
+      <exclusions>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.apollocurrency</groupId>
       <artifactId>apl-updater</artifactId>
       <exclusions>
         <exclusion>
@@ -100,10 +106,6 @@
           <artifactId>apl-utils</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.apollocurrency</groupId>
-      <artifactId>apl-core</artifactId>
     </dependency>
     <!-- command line arguments processing -->
     <dependency>
