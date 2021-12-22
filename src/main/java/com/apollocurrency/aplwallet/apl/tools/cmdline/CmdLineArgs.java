@@ -22,6 +22,8 @@ public class CmdLineArgs {
     public int debug = 2;
     @Parameter(names = "--help", help = true, description = "Print help message")
     public boolean help;
+    @Parameter(names = {"--service", "-s"}, description = "Tell that application should load all configs like blockchain node in service mode")
+    public boolean service = false ;
     @Parameter(names = {"--ignore-resources"}, description = "Ignore resources bundled with application jar. Default is false")
     public boolean ingnoreResources = false;
     @Parameter(names = {"--resources-path", "-r"}, description = "Load all resources from specified path. System resources ignored.")

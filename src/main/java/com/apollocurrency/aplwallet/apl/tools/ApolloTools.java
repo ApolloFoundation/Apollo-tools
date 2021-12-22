@@ -7,14 +7,12 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.CmdLineArgs;
-import com.apollocurrency.aplwallet.apl.tools.cmdline.CompactDbCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.ConstantsCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.HeightMonitorCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.MintCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.PubKeyCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.SignTxCmd;
 import com.apollocurrency.aplwallet.apl.tools.cmdline.UpdaterUrlCmd;
-import com.apollocurrency.aplwallet.apl.tools.impl.CompactDatabase;
 import com.apollocurrency.aplwallet.apl.tools.impl.ConstantsExporter;
 import com.apollocurrency.aplwallet.apl.tools.impl.GeneratePublicKey;
 import com.apollocurrency.aplwallet.apl.tools.impl.mint.MintWorkerRunner;
@@ -59,14 +57,13 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Main entry point to all Apollo tools. This is Swiss Army Knife for all Apollo
- * utilites with comprehensive command lline interface
+ * utilities with comprehensive command line interface
  *
  * @author alukin@gmail.com
  */
 public class ApolloTools {
     private final static String[] VALID_LOG_LEVELS = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
     private static final CmdLineArgs args = new CmdLineArgs();
-    private static final CompactDbCmd compactDb = new CompactDbCmd();
     private static final HeightMonitorCmd heightMonitorCmd = new HeightMonitorCmd();
     private static final PubKeyCmd pubkey = new PubKeyCmd();
     private static final SignTxCmd signtx = new SignTxCmd();
@@ -128,7 +125,6 @@ public class ApolloTools {
         toolsApp = new ApolloTools();
         JCommander jc = JCommander.newBuilder()
             .addObject(args)
-            .addCommand(CompactDbCmd.CMD, compactDb)
             .addCommand(HeightMonitorCmd.CMD, heightMonitorCmd)
             .addCommand(PubKeyCmd.CMD, pubkey)
             .addCommand(SignTxCmd.CMD, signtx)
@@ -153,9 +149,6 @@ public class ApolloTools {
         if (jc.getParsedCommand() == null) {
             jc.usage();
             System.exit(PosixExitCodes.OK.exitCode());
-        } else if (jc.getParsedCommand().equalsIgnoreCase(CompactDbCmd.CMD)) {
-            toolsApp.readConfigs(args.netId);
-            System.exit(toolsApp.compactDB());
         } else if (jc.getParsedCommand().equalsIgnoreCase(HeightMonitorCmd.CMD)) {
             toolsApp.heightMonitor();
         } else if (jc.getParsedCommand().equalsIgnoreCase(PubKeyCmd.CMD)) {
@@ -205,13 +198,6 @@ public class ApolloTools {
         RuntimeEnvironment.getInstance().setDirProvider(dirProvider);
     }
 
-    private int compactDB() {
-        CompactDatabase cdb = new CompactDatabase(propertiesHolder, dirProvider);
-
-        return cdb.compactDatabase();
-
-    }
-
     private int heightMonitor() {
         try {
             String peerFile = heightMonitorCmd.peerFile;
@@ -238,7 +224,7 @@ public class ApolloTools {
         if (signtx.useJson) {
             res = signTransactions.signJson(signtx.infile, signtx.outfile);
         } else {
-            res = signTransactions.sign(signtx.infile, signtx.outfile);
+            res = signTransactions.signBytes(signtx.infile, signtx.outfile);
         }
         return res;
     }
