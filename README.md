@@ -11,35 +11,76 @@ There are other components that are parts of Apollo:
 Apollo is being developed by the Apollo Foundation and supporting members of the community.
 This repository contains different tools to work with Apollo blockchain.
 
-The command line utili can
+The command line utility can
 
-* sign transactions offline
-* "mint" cyprocurency colored coins
-* generate/verify public key
-* export constants used in build time
-* run blockchain height monitor
+ 1. __Height monitor__, used to detect forks on apollo blockchain networks and monitor overall node state.
+ The configuration files used are in conf folder, see: peers.json, peers-1t.json, peers-2t.json, peers-3t.json 
+ 
+ 2. __RSA encryptor/decryptor__ (for update package url encryption, used by updater v1 release procedure)
+ 
+ 3. __Offline transaction signer__ - special utility, which performs signing of transactions locally without apollo node connection
+ 
+ 4. __Minter__ - generate new MINTABLE currency units by solving cryptographic puzzle (PoW)
+ 
 
 The 'height monitor' is the most frequently used tool, see in
 The configuration files used are in conf folder, see: peers.json, peers-1t.json, peers-2t.json, peers-3t.json 
 
-## Requirements
-
-[Apollo blockchain node](https://github.com/ApolloFoundation/Apollo) should be up and running for 
-most use cases, excep offline transaction signing.
-
-Java 11 (JRE) is required to run ___apollo-tools___.
-
-
-### Build instructions
-
-Fisrt, you should build [Apollo](https://github.com/ApolloFoundation/Apollo): Apollo blockchain node.
-
-Then go to cloned repository code and run
-```
-	./mvnw clean install
-```
-
-Final artefact will be assembled in ___tarfet___ directory with name similar to ___apollo-tools-1.47.15-NoOS-NoArch.zip___. Unzip it near to installed Apollo and run by scripts in ___ApolloWallet/apollo-tools/bin___ directory.
-
+ ## Getting started with Apollo tools
+ 1. Code is tested with **JDK 11** and targeted to that platform now. 
+ You should have it correctly installed (OpenJDK as example). Check your java version before proceeding: ```java --version```
+ 2. First you should build and install apollo tools: `./mvnw clean install`
+ 3. Then use scripts located under `bin/` folder to launch desired tool or simply launch the `apollo-tools` jar under `target` directory to get comprehensive cmd args usage
+ 4. Tool-specific configuration locates under `conf` directory, feel free to modify it for personal needs
+  ### Height monitor
+  Designed for network monitoring and finding forks, shard differences and slow or stuck peers
+  #### Prerequisites
+  1. Installed **JDK 11** and project built
+  #### Required steps
+  1. Choose network to monitor, available configs: mainnet, testnet 1, testnet 2, testnet 3, tap network; Or create your own config for another blockchain network using `conf/peers.json` as a peers config example.
+  2. Launch the following command:
+  ```
+    cd path/to/Apollo-tools-dir
+    ./bin/start-hm-mainnet.sh  -- Height monitor for mainnet
+    OR
+    ./bin/start-hm-testnet-1.sh  -- Height monitor for testnet 1
+    OR
+    ./bin/start-hm-testnet-2.sh  -- Height monitor for testnet 2
+    OR 
+    ./bin/start-hm-testnet-3.sh  -- Height monitor for testnet 3
+    OR
+    ./bin/apl-stat-height-monitor.sh "/absolute/path/to/your/network/peers" -- Height monitor for your custom network
+  ```
+  ### Updater URL encryptor/decryptor
+  The tool for updater url double encryption/decryption. See `bin/apl-rsadecrypt.sh` and `bin/apl-rsaencrypt.sh` for parameters details.
+  ### Offline transaction signer
+  Accept list of unsigned transactions from the input file and sign one by one and then write to the specified output file
+  Usage: `./bin/apl-sign.sh --input "/path/to/your/unsigned/txs"`
+  ### Currency Minter
+  Currency minter is designed to mint new units of mintable currencies. 
+  #### Prerequisites:
+  1. Launched Apollo node (locally or with an exposed API accessible from minting node)
+  2. Created **MINTABLE** currency (totalSupply > currentSupply)
+  3. Installed **JDK 11** and project built
+  #### Required steps
+  1. Specify in the `conf/apl-mint.properties` file host with Apollo API publicly exposed and accessible from your Currency Minter host (use the following properties: `apl.apiServerPort`, `apl.mint.useHttps`, `apl.mint.serverAddress`). For the Apollo node launched locally with default settings, no action required.
+  2. Specify in the `conf/apl-mint.properties` file under the `apl.mint.currencyCode` property code of the currency to mint
+  3. Depending on your hardware resources, set the `apl.mint.unitsPerMint` property to the number of units to mint per Mint Iteration. 
+  It is needed to balance between profit from frequent minting solutions and apl amount required to cover minting fees per found solution. 
+  Higher value set here increases total minting difficulty.
+  4. Specify the number of CPU threads allocated to minter under `apl.mint.threadPoolSize` property. For better performance - set here number of CPUs physical cores.
+  5. Launch from command line: 
+     ```
+     cd path/to/Apollo-tools-dir
+     ./bin/apl-mint.sh  -- Linux 
+     OR
+     ./bin/apl-mint.bat -- Windows
  
+     ```
+ 6. Type your Apollo's account secretPhrase into launched command prompt or for vault wallet: use exported secretKey
+ 7. All done
+ 
+ #### Further steps
+ 1. Explore  rest of the properties for your needs under `conf/apl-mint.properties`
+ 2. Use your independent config for minter: add to startup script the following argument: -c "/absolute/path/to/your/config": `./bin/apl-mint.sh -c "/home/user/apollo/mint.config"`
 

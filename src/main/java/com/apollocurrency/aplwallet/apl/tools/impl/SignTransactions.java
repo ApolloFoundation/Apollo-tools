@@ -5,80 +5,91 @@
 package com.apollocurrency.aplwallet.apl.tools.impl;
 
 import com.apollocurrency.aplwallet.api.dto.TransactionDTO;
+import com.apollocurrency.aplwallet.apl.core.app.AplException;
+import com.apollocurrency.aplwallet.apl.core.entity.blockchain.Transaction;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
+import com.apollocurrency.aplwallet.apl.util.FileUtils;
 import com.apollocurrency.aplwallet.apl.util.JSON;
 import com.apollocurrency.aplwallet.apl.util.env.PosixExitCodes;
+import com.fasterxml.jackson.core.type.TypeReference;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+@Slf4j
 public class SignTransactions {
     private final TxBuilder builder;
     public SignTransactions(long genesisCreatorId) {
         this.builder = new TxBuilder(genesisCreatorId);
     }
 
-    public int sign(String unsignedFN, String signedFN) {
-        try {
-            File unsigned = new File(unsignedFN);
-            if (!unsigned.exists()) {
-                System.out.println("File not found: " + unsigned.getAbsolutePath());
-                return PosixExitCodes.EX_IOERR.exitCode();
-            }
-            File signed = new File(signedFN);
-            if (signed.exists()) {
-                System.out.println("File already exists: " + signed.getAbsolutePath());
-                return PosixExitCodes.EX_IOERR.exitCode();
-            }
-
-            byte[] keySeed = KeySeedUtil.readKeySeed().getKeySeed();
-            int n = 0;
-            if (Files.exists(signed.toPath())) {
-                Files.delete(signed.toPath());
-            }
-            Files.createFile(signed.toPath());
-            List<String> unsignedTransactions = Files.readAllLines(unsigned.toPath());
-
-            for (String unsignedTransaction : unsignedTransactions) {
-
-                Files.write(signed.toPath(), builder.buildAndSign(Convert.parseHexString(unsignedTransaction), keySeed).getCopyTxBytes(), StandardOpenOption.APPEND);
-                Files.write(signed.toPath(), System.lineSeparator().getBytes(), StandardOpenOption.APPEND);
-                n += 1;
-            }
-            System.out.println("Signed " + n + " transactions");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return PosixExitCodes.EX_IOERR.exitCode();
-        }
-        return PosixExitCodes.OK.exitCode();
+    public int signBytes(String unsignedFN, String signedFN) {
+        return sign(unsignedFN, signedFN, this::readHexadecimalTransactions);
     }
 
     public int signJson(String unsignedFN, String signedFN) {
+        return sign(unsignedFN, signedFN, this::readJsonTransactions);
+    }
+    public int sign(String unsignedFN, String signedFN, Function<Path, List<Transaction>> txReader) {
         try {
-            File unsigned = new File(unsignedFN);
-            if (!unsigned.exists()) {
-                System.out.println("File not found: " + unsigned.getAbsolutePath());
+            Path unsignedFilePath = Paths.get(unsignedFN);
+            if (!Files.exists(unsignedFilePath)) {
+                log.error("File not found: {}", unsignedFilePath.toAbsolutePath());
                 return PosixExitCodes.EX_IOERR.exitCode();
             }
-            File signed = new File(signedFN);
-            if (signed.exists()) {
-                System.out.println("File already exists: " + signed.getAbsolutePath());
-                return PosixExitCodes.EX_IOERR.exitCode();
-            }
+            Path signedFilePath = Paths.get(signedFN);
             byte[] keySeed = KeySeedUtil.readKeySeed().getKeySeed();
-            try (BufferedReader reader = new BufferedReader(new FileReader(unsigned))) {
-                TransactionDTO transactionDTO = JSON.getMapper().readValue(reader, TransactionDTO.class);
-                Files.write(signed.toPath(), builder.buildAndSign(transactionDTO, keySeed).getCopyTxBytes(), StandardOpenOption.CREATE);
-                System.out.println("Signed transaction JSON saved as: " + signed.getAbsolutePath());
-            }
+
+            List<String> signedTransactions = txReader.apply(unsignedFilePath).stream()
+                .map(e -> builder.sign(e, keySeed))
+                .peek(e-> log.debug("Signed tx {} as {}", Convert.toHexString(e.getUnsignedBytes()), Convert.toHexString(e.getCopyTxBytes())))
+                .map(e-> Convert.toHexString(e.getCopyTxBytes()))
+                .collect(Collectors.toList());
+            Files.createDirectories(signedFilePath.getParent());
+            Files.write(signedFilePath, signedTransactions);
+            log.info("Written {} signed txs to {}", signedTransactions.size(), signedFilePath);
+            return PosixExitCodes.OK.exitCode();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error during signing transactions", e);
             return PosixExitCodes.EX_IOERR.exitCode();
         }
-        return PosixExitCodes.OK.exitCode();
+    }
+
+
+
+    List<Transaction> readJsonTransactions(Path filePath) {
+        List<TransactionDTO> txs;
+        try {
+            txs = JSON.getMapper().readValue(filePath.toFile(), new TypeReference<>() {});
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return txs.stream().map(builder::dtoToTx).collect(Collectors.toList());
+    }
+
+    List<Transaction> readHexadecimalTransactions(Path filePath) {
+        List<String> txs;
+        try {
+            txs = Files.readAllLines(filePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return txs.stream().map(Convert::parseHexString).map(e -> {
+            try {
+                return builder.build(e);
+            } catch (AplException.NotValidException notValidException) {
+                throw new RuntimeException(notValidException);
+            }
+        }).collect(Collectors.toList());
     }
 }

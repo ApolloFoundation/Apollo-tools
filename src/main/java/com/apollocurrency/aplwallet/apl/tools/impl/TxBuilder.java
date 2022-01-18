@@ -8,8 +8,10 @@ import com.apollocurrency.aplwallet.apl.core.entity.state.account.Account;
 import com.apollocurrency.aplwallet.apl.core.entity.state.account.LedgerEvent;
 import com.apollocurrency.aplwallet.apl.core.rest.converter.TransactionDTOConverter;
 import com.apollocurrency.aplwallet.apl.core.rest.service.DexOrderAttachmentFactory;
+import com.apollocurrency.aplwallet.apl.core.rest.service.PhasingAppendixFactory;
 import com.apollocurrency.aplwallet.apl.core.signature.DocumentSigner;
 import com.apollocurrency.aplwallet.apl.core.signature.Signature;
+import com.apollocurrency.aplwallet.apl.core.signature.SignatureParser;
 import com.apollocurrency.aplwallet.apl.core.signature.SignatureToolFactory;
 import com.apollocurrency.aplwallet.apl.core.transaction.CachedTransactionTypeFactory;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionBuilder;
@@ -40,6 +42,9 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsPr
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsPurchase;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsQuantityChange;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsRefund;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.EncryptToSelfMessageAppendix;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.EncryptedMessageAppendix;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessageAppendix;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingAccountInfo;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingAccountProperty;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingAccountPropertyDelete;
@@ -61,6 +66,9 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystem
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemReserveIncrease;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.OrdinaryPaymentAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrivatePaymentAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrunableEncryptedMessageAppendix;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrunablePlainMessageAppendix;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.PublicKeyAnnouncementAppendix;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.SetPhasingOnly;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingCancellationAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingCreation;
@@ -74,6 +82,9 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.update.Critica
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.update.ImportantUpdate;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.update.MinorUpdate;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.update.UpdateV2Attachment;
+import com.apollocurrency.aplwallet.apl.core.utils.CollectionUtil;
+import com.apollocurrency.aplwallet.apl.crypto.Convert;
+import com.apollocurrency.aplwallet.apl.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 
@@ -85,7 +96,6 @@ import java.util.stream.Collectors;
 public class TxBuilder {
     private final CachedTransactionTypeFactory factory;
     private final TransactionBuilder txBuilder;
-    private final TransactionDTOConverter dtoConverter;
     private final DocumentSigner signer = SignatureToolFactory.selectBuilder(1).orElseThrow(UnsupportedTransactionVersion::new);
     private final long genesisCreatorId; // required for txs without recipient
     public TxBuilder(long genesisCreatorId) {
@@ -93,15 +103,20 @@ public class TxBuilder {
         this.genesisCreatorId = genesisCreatorId;
         this.factory = new CachedTransactionTypeFactory(Arrays.stream(TransactionTypes.TransactionTypeSpec.values()).map(BasicTransactionType::new).collect(Collectors.toList()));
         this.txBuilder = new TransactionBuilder(factory);
-        this.dtoConverter = new TransactionDTOConverter(factory);
     }
 
-    public Transaction buildAndSign(byte[] bytes, byte[] keySeed) throws AplException.NotValidException {
+    public Transaction build(byte[] bytes) throws AplException.NotValidException {
         TransactionImpl.BuilderImpl builder = txBuilder.newTransactionBuilder(bytes);
-
-        return sign(builder.build(), keySeed);
+        setGenesisId(builder);
+        return builder.build();
     }
 
+    /**
+     * It is a workaround to set recipient id of transaction without recipient to same value as {@link com.apollocurrency.aplwallet.apl.core.app.GenesisImporter#CREATOR_ID} offer,
+     * by checking recipient field (should be zero)
+     * @param builder transaction builder to set recipient to genesisCreatorId
+     * @throws AplException.NotValidException when unable to build transaction through given builder
+     */
     public void setGenesisId(Transaction.Builder builder) throws AplException.NotValidException {
         if (builder.build().getRecipientId() == 0) {
             builder.recipientId(genesisCreatorId);
@@ -119,8 +134,76 @@ public class TxBuilder {
         return tx;
     }
 
-    public Transaction buildAndSign(TransactionDTO dto, byte[] keySeed) {
-        return sign(dtoConverter.apply(dto), keySeed);
+    public Transaction dtoToTx(TransactionDTO dto) {
+        if (StringUtils.isBlank(dto.getRecipient())) {
+            dto.setRecipient(Long.toUnsignedString(genesisCreatorId));
+        }
+        return convertTransactionFromDTO(dto);
+    }
+
+    /**
+     * Used to support conversion of unsigned transactions
+     * @param txDto parsed from json tx dto
+     * @return transaction object (signed/unsigned)
+     */
+    public Transaction convertTransactionFromDTO(TransactionDTO txDto) {
+        try {
+            byte[] senderPublicKey = Convert.parseHexString(txDto.getSenderPublicKey());
+            byte version = txDto.getVersion() == null ? 0 : txDto.getVersion();
+            Signature signature = null;
+            if (StringUtils.isNotBlank(txDto.getSignature())) {
+                SignatureParser signatureParser = SignatureToolFactory.selectParser(version).orElseThrow(UnsupportedTransactionVersion::new);
+                signature = signatureParser.parse(Convert.parseHexString(txDto.getSignature()));
+            }
+
+            int ecBlockHeight = 0;
+            long ecBlockId = 0;
+            if (version > 0) {
+                ecBlockHeight = txDto.getEcBlockHeight();
+                ecBlockId = Convert.parseUnsignedLong(txDto.getEcBlockId());
+            }
+
+            TransactionType transactionType = factory.findTransactionType(txDto.getType(), txDto.getSubtype());
+            if (transactionType == null) {
+                throw new AplException.NotValidException("Invalid transaction type: " + txDto.getType() + ", " + txDto.getSubtype());
+            }
+
+            JSONObject attachmentData;
+            if (!CollectionUtil.isEmpty(txDto.getAttachment())) {
+                attachmentData = new JSONObject(txDto.getAttachment());
+            } else {
+                throw new AplException.NotValidException("Transaction dto {" + txDto + "} has no attachment");
+            }
+
+            AbstractAttachment attachment = transactionType.parseAttachment(attachmentData);
+            attachment.bindTransactionType(transactionType);
+            TransactionImpl.BuilderImpl builder = new TransactionImpl.BuilderImpl(version, senderPublicKey,
+                Convert.parseLong(txDto.getAmountATM()),
+                Convert.parseLong(txDto.getFeeATM()),
+                txDto.getDeadline(),
+                attachment, txDto.getTimestamp(), transactionType)
+                .referencedTransactionFullHash(txDto.getReferencedTransactionFullHash())
+                .signature(signature)
+                .ecBlockHeight(ecBlockHeight)
+                .ecBlockId(ecBlockId);
+            if (transactionType.canHaveRecipient()) {
+                long recipientId = Convert.parseUnsignedLong(txDto.getRecipient());
+                builder.recipientId(recipientId);
+            }
+
+            builder.appendix(MessageAppendix.parse(attachmentData));
+            builder.appendix(EncryptedMessageAppendix.parse(attachmentData));
+            builder.appendix(PublicKeyAnnouncementAppendix.parse(attachmentData));
+            builder.appendix(EncryptToSelfMessageAppendix.parse(attachmentData));
+            builder.appendix(PhasingAppendixFactory.parse(attachmentData));
+            builder.appendix(PrunablePlainMessageAppendix.parse(attachmentData));
+            builder.appendix(PrunableEncryptedMessageAppendix.parse(attachmentData));
+
+            return builder.build();
+        } catch (RuntimeException | AplException.NotValidException e) {
+            log.debug("Failed to parse transaction: " + txDto.toString());
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -439,6 +522,11 @@ public class TxBuilder {
 
         }
 
+        /**
+         * @return always true to make it possible to use {@link TransactionImpl#getCopyTxBytes()} method which will
+         * by default insert {@link com.apollocurrency.aplwallet.apl.core.app.GenesisImporter#CREATOR_ID} for txs without recipient,
+         * but this value is not initialized and always 0, which will lead to incorrect unsignedBytes sequence to sign
+         */
         @Override
         public boolean canHaveRecipient() {
             return true;
