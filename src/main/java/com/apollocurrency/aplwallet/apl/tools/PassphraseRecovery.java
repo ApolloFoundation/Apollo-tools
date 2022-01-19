@@ -15,24 +15,23 @@
  */
 
 /*
- * Copyright © 2018 Apollo Foundation
+ * Copyright © 2018-2022 Apollo Foundation
  */
 
 package com.apollocurrency.aplwallet.apl.tools;
 
-import com.apollocurrency.aplwallet.apl.core.dao.appdata.cdi.transaction.JdbiHandleFactory;
-import com.apollocurrency.aplwallet.apl.core.service.appdata.DatabaseManager;
-import com.apollocurrency.aplwallet.apl.core.service.appdata.impl.DatabaseManagerImpl;
 import com.apollocurrency.aplwallet.apl.core.service.state.account.AccountService;
-import com.apollocurrency.aplwallet.apl.core.utils.Convert2;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.crypto.Crypto;
+import com.apollocurrency.aplwallet.apl.util.Convert2;
 import com.apollocurrency.aplwallet.apl.util.StringUtils;
+import com.apollocurrency.aplwallet.apl.util.db.DataSourceWrapper;
 import com.apollocurrency.aplwallet.apl.util.injectable.DbProperties;
 import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
 import org.slf4j.Logger;
 
 import javax.enterprise.inject.spi.CDI;
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -57,7 +56,7 @@ public final class PassphraseRecovery {
     private static final Logger LOG = getLogger(PassphraseRecovery.class);
     // TODO: YL remove static instance later
     private static PropertiesHolder propertiesHolder = CDI.current().select(PropertiesHolder.class).get();
-    private static DatabaseManager databaseManager;
+    private static DataSource ds;
 
     public static void main(String[] args) {
         new PassphraseRecovery().recover();
@@ -73,9 +72,9 @@ public final class PassphraseRecovery {
 
     static Map<Long, byte[]> getPublicKeys() {
         DbProperties dbProperties = CDI.current().select(DbProperties.class).get(); // it should be present and initialized
-        databaseManager = new DatabaseManagerImpl(dbProperties, propertiesHolder, new JdbiHandleFactory());
+        DataSourceWrapper ds = new DataSourceWrapper(dbProperties);
         Map<Long, byte[]> publicKeys = new HashMap<>();
-        try (Connection con = databaseManager.getDataSource().getConnection();
+        try (Connection con = ds.getConnection();
              PreparedStatement selectBlocks = con.prepareStatement("SELECT * FROM public_key WHERE latest=TRUE");
              ResultSet rs = selectBlocks.executeQuery()) {
             while (rs.next()) {
