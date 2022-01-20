@@ -1,7 +1,11 @@
+/*
+ * Copyright © 2018-2022 Apollo Foundation
+ */
+
 package com.apollocurrency.aplwallet.apl.tools.impl.mint;
 
-import com.apollocurrency.aplwallet.apl.core.app.AplException;
-import com.apollocurrency.aplwallet.apl.core.entity.blockchain.Transaction;
+import com.apollocurrency.aplwallet.apl.core.model.Transaction;
+import com.apollocurrency.aplwallet.apl.core.service.state.account.AccountService;
 import com.apollocurrency.aplwallet.apl.core.service.state.currency.MonetaryCurrencyMintingService;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyMinting;
@@ -88,8 +92,7 @@ public class MintWorker implements Runnable {
         byte[] keySeed = keySeedSpec.getKeySeed();
         boolean isSubmitted = propertiesHolder.getBooleanProperty("apl.mint.isSubmitted");
         boolean isStopOnError = propertiesHolder.getBooleanProperty("apl.mint.stopOnError");
-        byte[] publicKeyHash = Crypto.sha256().digest(Crypto.getPublicKey(keySeed));
-        long accountId = Convert.fullHashToId(publicKeyHash);
+        long accountId = AccountService.getId(Crypto.getPublicKey(keySeed));
         String rsAccount = getAccountPrefix() + "-" + Crypto.rsEncode(accountId);
         JSONObject currency = getCurrency(currencyCode);
         txBuilder = new TxBuilder(Convert.parseUnsignedLong(getGenesisAccountId()));
@@ -202,9 +205,9 @@ public class MintWorker implements Runnable {
 
             Map<String, String> params = new HashMap<>();
             params.put("requestType", "broadcastTransaction");
-            params.put("transactionBytes", Convert.toHexString(transaction.getCopyTxBytes()));
+            params.put("transactionBytes", Convert.toHexString(txBuilder.toBytes(transaction).array()));
             return getJsonResponse(params);
-        } catch (AplException.NotValidException e) {
+        } catch (RuntimeException e) {
             log.info("local signing failed", e);
             JSONObject response = new JSONObject();
             response.put("error", e.toString());

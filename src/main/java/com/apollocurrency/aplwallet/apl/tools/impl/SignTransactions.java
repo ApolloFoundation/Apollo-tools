@@ -1,27 +1,21 @@
 /*
- *  Copyright © 2018-2019 Apollo Foundation
+ *  Copyright © 2018-2022 Apollo Foundation
  */
 
 package com.apollocurrency.aplwallet.apl.tools.impl;
 
 import com.apollocurrency.aplwallet.api.dto.TransactionDTO;
-import com.apollocurrency.aplwallet.apl.core.app.AplException;
-import com.apollocurrency.aplwallet.apl.core.entity.blockchain.Transaction;
+import com.apollocurrency.aplwallet.apl.core.model.Transaction;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
-import com.apollocurrency.aplwallet.apl.util.FileUtils;
 import com.apollocurrency.aplwallet.apl.util.JSON;
 import com.apollocurrency.aplwallet.apl.util.env.PosixExitCodes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -51,9 +45,10 @@ public class SignTransactions {
             byte[] keySeed = KeySeedUtil.readKeySeed().getKeySeed();
 
             List<String> signedTransactions = txReader.apply(unsignedFilePath).stream()
-                .map(e -> builder.sign(e, keySeed))
-                .peek(e-> log.debug("Signed tx {} as {}", Convert.toHexString(e.getUnsignedBytes()), Convert.toHexString(e.getCopyTxBytes())))
-                .map(e-> Convert.toHexString(e.getCopyTxBytes()))
+                .map(e -> builder.buildAndSign(builder.toUnsignedBytes(e).array(), keySeed))
+                .peek(e-> log.debug("Signed tx {} as {}", Convert.toHexString(builder.toUnsignedBytes(e).array()),
+                    Convert.toHexString(builder.toBytes(e).array())))
+                .map(e->  Convert.toHexString(builder.toBytes(e).array()))
                 .collect(Collectors.toList());
             Files.createDirectories(signedFilePath.getParent());
             Files.write(signedFilePath, signedTransactions);
@@ -64,7 +59,6 @@ public class SignTransactions {
             return PosixExitCodes.EX_IOERR.exitCode();
         }
     }
-
 
 
     List<Transaction> readJsonTransactions(Path filePath) {
@@ -84,12 +78,6 @@ public class SignTransactions {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return txs.stream().map(Convert::parseHexString).map(e -> {
-            try {
-                return builder.build(e);
-            } catch (AplException.NotValidException notValidException) {
-                throw new RuntimeException(notValidException);
-            }
-        }).collect(Collectors.toList());
+        return txs.stream().map(Convert::parseHexString).map(builder::build).collect(Collectors.toList());
     }
 }
