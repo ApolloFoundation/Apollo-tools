@@ -1,49 +1,58 @@
+/*
+ * Copyright © 2018-2022 Apollo Foundation
+ */
+
 package com.apollocurrency.aplwallet.apl.tools.impl;
 
 import com.apollocurrency.aplwallet.api.dto.TransactionDTO;
-import com.apollocurrency.aplwallet.apl.core.app.AplException;
-import com.apollocurrency.aplwallet.apl.core.entity.blockchain.Transaction;
-import com.apollocurrency.aplwallet.apl.core.entity.blockchain.TransactionImpl;
+import com.apollocurrency.aplwallet.apl.core.chainid.BlockchainConfig;
 import com.apollocurrency.aplwallet.apl.core.entity.state.account.Account;
 import com.apollocurrency.aplwallet.apl.core.entity.state.account.LedgerEvent;
-import com.apollocurrency.aplwallet.apl.core.rest.converter.TransactionDTOConverter;
+import com.apollocurrency.aplwallet.apl.core.model.Transaction;
+import com.apollocurrency.aplwallet.apl.core.model.TransactionImpl;
 import com.apollocurrency.aplwallet.apl.core.rest.service.DexOrderAttachmentFactory;
 import com.apollocurrency.aplwallet.apl.core.rest.service.PhasingAppendixFactory;
+import com.apollocurrency.aplwallet.apl.core.service.blockchain.TransactionBuilderFactory;
 import com.apollocurrency.aplwallet.apl.core.signature.DocumentSigner;
 import com.apollocurrency.aplwallet.apl.core.signature.Signature;
 import com.apollocurrency.aplwallet.apl.core.signature.SignatureParser;
 import com.apollocurrency.aplwallet.apl.core.signature.SignatureToolFactory;
 import com.apollocurrency.aplwallet.apl.core.transaction.CachedTransactionTypeFactory;
-import com.apollocurrency.aplwallet.apl.core.transaction.TransactionBuilder;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionType;
 import com.apollocurrency.aplwallet.apl.core.transaction.TransactionTypes;
+import com.apollocurrency.aplwallet.apl.core.transaction.TransactionWrapperHelper;
 import com.apollocurrency.aplwallet.apl.core.transaction.UnsupportedTransactionVersion;
+import com.apollocurrency.aplwallet.apl.core.transaction.common.TxBContext;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.AbstractAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.AccountControlEffectiveBalanceLeasing;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.Attachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.CCAskOrderPlacementAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.CCAssetDeleteAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.CCAssetTransferAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.CCBidOrderPlacementAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.CCDividendPaymentAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ChildAccountAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsAskOrderCancellation;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsAskOrderPlacement;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsAssetDelete;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsAssetIssuance;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsAssetTransfer;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsBidOrderCancellation;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsBidOrderPlacement;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ColoredCoinsDividendPayment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSDelistingAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSDeliveryAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSFeedbackAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSListingAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSPriceChangeAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSPurchaseAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSQuantityChangeAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.DGSRefundAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DexCloseOrderAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DexContractAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DexControlOfFrozenMoneyAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.DexOrderCancelAttachment;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsDelisting;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsDelivery;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsFeedback;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsListing;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsPriceChange;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsPurchase;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsQuantityChange;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.DigitalGoodsRefund;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.EncryptToSelfMessageAppendix;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.EncryptedMessageAppendix;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MSCurrencyTransferAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MSExchangeSellAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MSPublishExchangeOfferAttachment;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MSReserveClaimAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessageAppendix;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingAccountInfo;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingAccountProperty;
@@ -56,14 +65,10 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingPhasi
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingPollCreation;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MessagingVoteCasting;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyDeletion;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyIssuance;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyIssuanceAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyMinting;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemCurrencyTransfer;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemExchangeBuyAttachment;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemExchangeSell;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemPublishExchangeOffer;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemReserveClaim;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemReserveIncrease;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.MonetarySystemReserveIncreaseAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.OrdinaryPaymentAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrivatePaymentAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrunableEncryptedMessageAppendix;
@@ -71,10 +76,10 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.PrunablePlainM
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.PublicKeyAnnouncementAppendix;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.SetPhasingOnly;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingCancellationAttachment;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingCreation;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingCreationAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingProcessingAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingRecipientsAttachment;
-import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingRegistration;
+import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingRegistrationAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.ShufflingVerificationAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.TaggedDataExtendAttachment;
 import com.apollocurrency.aplwallet.apl.core.transaction.messages.TaggedDataUploadAttachment;
@@ -85,28 +90,72 @@ import com.apollocurrency.aplwallet.apl.core.transaction.messages.update.UpdateV
 import com.apollocurrency.aplwallet.apl.core.utils.CollectionUtil;
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.util.StringUtils;
+import com.apollocurrency.aplwallet.apl.util.env.config.BlockchainProperties;
+import com.apollocurrency.aplwallet.apl.util.env.config.Chain;
+import com.apollocurrency.aplwallet.apl.util.env.config.FeaturesHeightRequirement;
+import com.apollocurrency.aplwallet.apl.util.exception.AplException;
+import com.apollocurrency.aplwallet.apl.util.injectable.PropertiesHolder;
+import com.apollocurrency.aplwallet.apl.util.io.PayloadResult;
+import com.apollocurrency.aplwallet.apl.util.io.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class TxBuilder {
     private final CachedTransactionTypeFactory factory;
-    private final TransactionBuilder txBuilder;
-    private final DocumentSigner signer = SignatureToolFactory.selectBuilder(1).orElseThrow(UnsupportedTransactionVersion::new);
+    private final TransactionBuilderFactory txBuilder;
+    private final DocumentSigner signer = SignatureToolFactory.selectSigner(1).orElseThrow(UnsupportedTransactionVersion::new);
     private final long genesisCreatorId; // required for txs without recipient
-    public TxBuilder(long genesisCreatorId) {
 
+    // Mock chain because of NPE in BlockchainConfig init when empty chain supplied
+    private static final UUID MOCKED_CHAIN_ID = UUID.fromString("3fecf3bd-86a3-436b-a1d6-41eefc0bd1c6");
+    private static final List<BlockchainProperties> MOCKED_BLOCKCHAIN_PROPERTIES1 = Collections.singletonList(
+        new BlockchainProperties(0, 255, 160, 1, 60, 67,
+            53, 30000000000L));
+    private static final Chain MOCKED_CHAIN = new Chain(MOCKED_CHAIN_ID, true, Collections.emptyList(), Collections.emptyList(),
+        Collections.emptyList(),
+        "Apollo mock net",
+        "Mock network to stub BlockchainConfig init", "Apollo",
+        "APL", "Apollo",
+        30000000000L, 8,
+        MOCKED_BLOCKCHAIN_PROPERTIES1, new FeaturesHeightRequirement(), Set.of(), Set.of());
+
+
+
+    public TxBuilder(long genesisCreatorId) {
         this.genesisCreatorId = genesisCreatorId;
         this.factory = new CachedTransactionTypeFactory(Arrays.stream(TransactionTypes.TransactionTypeSpec.values()).map(BasicTransactionType::new).collect(Collectors.toList()));
-        this.txBuilder = new TransactionBuilder(factory);
+        this.txBuilder = new TransactionBuilderFactory(factory, new BlockchainConfig(MOCKED_CHAIN, new PropertiesHolder()));
     }
 
-    public Transaction build(byte[] bytes) throws AplException.NotValidException {
-        TransactionImpl.BuilderImpl builder = txBuilder.newTransactionBuilder(bytes);
+    public Transaction buildAndSign(byte[] bytes, byte[] keySeed) {
+        Transaction tx = build(bytes);
+
+        return sign(tx, keySeed);
+    }
+
+    public Transaction build(byte[] bytes) {
+        Transaction transaction = createTxFrom(bytes);
+        TransactionImpl.Builder builder = newTransactionBuilder(transaction.getSenderPublicKey(), transaction.getAmountATM(), transaction.getFeeATM(), transaction.getDeadline(), transaction.getAttachment(), transaction.getTimestamp());
+        builder.ecBlockHeight(transaction.getECBlockHeight());
+        builder.ecBlockId(transaction.getECBlockId());
+        builder.signature(transaction.getSignature());
+        builder.appendix(transaction.getMessage());
+        builder.appendix(transaction.getPublicKeyAnnouncement());
+        builder.appendix(transaction.getEncryptToSelfMessage());
+        builder.appendix(transaction.getPrunableEncryptedMessage());
+        builder.appendix(transaction.getPrunablePlainMessage());
+        builder.appendix(transaction.getEncryptedMessage());
+        builder.appendix(transaction.getPhasing());
+        builder.recipientId(transaction.getRecipientId());
         setGenesisId(builder);
         return builder.build();
     }
@@ -115,22 +164,41 @@ public class TxBuilder {
      * It is a workaround to set recipient id of transaction without recipient to same value as {@link com.apollocurrency.aplwallet.apl.core.app.GenesisImporter#CREATOR_ID} offer,
      * by checking recipient field (should be zero)
      * @param builder transaction builder to set recipient to genesisCreatorId
-     * @throws AplException.NotValidException when unable to build transaction through given builder
      */
-    public void setGenesisId(Transaction.Builder builder) throws AplException.NotValidException {
+    public void setGenesisId(Transaction.Builder builder) {
         if (builder.build().getRecipientId() == 0) {
             builder.recipientId(genesisCreatorId);
         }
     }
 
-    public Transaction.Builder newTransactionBuilder(byte[] senderPublicKey, long amountATM, long feeATM, short deadline, Attachment attachment, int timestamp) throws AplException.NotValidException {
-        Transaction.Builder builder = txBuilder.newTransactionBuilder(senderPublicKey, amountATM, feeATM, deadline, attachment, timestamp);
+    public Result toUnsignedBytes(Transaction tx) {
+        Result result = PayloadResult.createLittleEndianByteArrayResult();
+
+        TxBContext instance = TxBContext.newInstance(MOCKED_CHAIN);
+        instance.createSerializer(tx.getVersion()).serialize(TransactionWrapperHelper.createUnsignedTransaction(tx), result);
+
+        return result;
+    }
+
+    public Result toBytes(Transaction tx) {
+        Result result = PayloadResult.createLittleEndianByteArrayResult();
+
+        TxBContext instance = TxBContext.newInstance(MOCKED_CHAIN);
+        instance.createSerializer(tx.getVersion()).serialize(tx, result);
+
+        return result;
+    }
+
+    public Transaction.Builder newTransactionBuilder(byte[] senderPublicKey, long amountATM, long feeATM, short deadline, Attachment attachment, int timestamp) {
+        Transaction.Builder builder = txBuilder.newUnsignedTransactionBuilder(1, senderPublicKey, amountATM, feeATM, deadline, attachment, timestamp);
         return builder;
     }
 
     public Transaction sign(Transaction tx, byte[] keySeed) {
-        Signature signature = signer.sign(tx.getUnsignedBytes(), SignatureToolFactory.createCredential(1, keySeed));
-        tx.sign(signature);
+        Result unsignedBytes = toUnsignedBytes(tx);
+        Signature signature = signer.sign(unsignedBytes.array(), SignatureToolFactory.createCredential(1, keySeed));
+
+        ((TransactionImpl) tx.getTransactionImpl()).sign(signature, unsignedBytes);
         return tx;
     }
 
@@ -206,6 +274,16 @@ public class TxBuilder {
         }
     }
 
+    private Transaction createTxFrom(byte[] bytes) {
+        Transaction tx;
+        try {
+            tx = txBuilder.newTransaction(bytes);
+        } catch (AplException.NotValidException e) {
+            throw new RuntimeException("Unable to create transaction from bytes: " + Convert.toHexString(bytes), e);
+        }
+        return tx;
+    }
+
 
     private static class BasicTransactionType extends TransactionType{
         private final TransactionTypes.TransactionTypeSpec spec;
@@ -268,9 +346,9 @@ public class TxBuilder {
                 case TAGGED_DATA_EXTEND:
                     return new TaggedDataExtendAttachment(buffer);
                 case SHUFFLING_CREATION:
-                    return new ShufflingCreation(buffer);
+                    return new ShufflingCreationAttachment(buffer);
                 case SHUFFLING_REGISTRATION:
-                    return new ShufflingRegistration(buffer);
+                    return new ShufflingRegistrationAttachment(buffer);
                 case SHUFFLING_PROCESSING:
                     return new ShufflingProcessingAttachment(buffer);
                 case SHUFFLING_RECIPIENTS:
@@ -281,19 +359,19 @@ public class TxBuilder {
                     return new ShufflingCancellationAttachment(buffer);
 
                 case MS_CURRENCY_ISSUANCE:
-                    return new MonetarySystemCurrencyIssuance(buffer);
+                    return new MonetarySystemCurrencyIssuanceAttachment(buffer);
                 case MS_RESERVE_INCREASE:
-                    return new MonetarySystemReserveIncrease(buffer);
+                    return new MonetarySystemReserveIncreaseAttachment(buffer);
                 case MS_RESERVE_CLAIM:
-                    return new MonetarySystemReserveClaim(buffer);
+                    return new MSReserveClaimAttachment(buffer);
                 case MS_CURRENCY_TRANSFER:
-                    return new MonetarySystemCurrencyTransfer(buffer);
+                    return new MSCurrencyTransferAttachment(buffer);
                 case MS_PUBLISH_EXCHANGE_OFFER:
-                    return new MonetarySystemPublishExchangeOffer(buffer);
+                    return new MSPublishExchangeOfferAttachment(buffer);
                 case MS_EXCHANGE_BUY:
                     return new MonetarySystemExchangeBuyAttachment(buffer);
                 case MS_EXCHANGE_SELL:
-                    return new MonetarySystemExchangeSell(buffer);
+                    return new MSExchangeSellAttachment(buffer);
                 case MS_CURRENCY_MINTING:
                     return new MonetarySystemCurrencyMinting(buffer);
                 case MS_CURRENCY_DELETION:
@@ -301,36 +379,36 @@ public class TxBuilder {
                 case CC_ASSET_ISSUANCE:
                     return new ColoredCoinsAssetIssuance(buffer);
                 case CC_ASSET_TRANSFER:
-                    return new ColoredCoinsAssetTransfer(buffer);
+                    return new CCAssetTransferAttachment(buffer);
                 case CC_ASK_ORDER_PLACEMENT:
-                    return new ColoredCoinsAskOrderPlacement(buffer);
+                    return new CCAskOrderPlacementAttachment(buffer);
                 case CC_BID_ORDER_PLACEMENT:
-                    return new ColoredCoinsBidOrderPlacement(buffer);
+                    return new CCBidOrderPlacementAttachment(buffer);
                 case CC_ASK_ORDER_CANCELLATION:
                     return new ColoredCoinsAskOrderCancellation(buffer);
                 case CC_BID_ORDER_CANCELLATION:
                     return new ColoredCoinsBidOrderCancellation(buffer);
                 case CC_DIVIDEND_PAYMENT:
-                    return new ColoredCoinsDividendPayment(buffer);
+                    return new CCDividendPaymentAttachment(buffer);
                 case CC_ASSET_DELETE:
-                    return new ColoredCoinsAssetDelete(buffer);
+                    return new CCAssetDeleteAttachment(buffer);
 
                 case DGS_LISTING:
-                    return new DigitalGoodsListing(buffer);
+                    return new DGSListingAttachment(buffer);
                 case DGS_DELISTING:
-                    return new DigitalGoodsDelisting(buffer);
+                    return new DGSDelistingAttachment(buffer);
                 case DGS_CHANGE_PRICE:
-                    return new DigitalGoodsPriceChange(buffer);
+                    return new DGSPriceChangeAttachment(buffer);
                 case DGS_CHANGE_QUANTITY:
-                    return new DigitalGoodsQuantityChange(buffer);
+                    return new DGSQuantityChangeAttachment(buffer);
                 case DGS_PURCHASE:
-                    return new DigitalGoodsPurchase(buffer);
+                    return new DGSPurchaseAttachment(buffer);
                 case DGS_DELIVERY:
-                    return new DigitalGoodsDelivery(buffer);
+                    return new DGSDeliveryAttachment(buffer);
                 case DGS_FEEDBACK:
-                    return new DigitalGoodsFeedback(buffer);
+                    return new DGSFeedbackAttachment(buffer);
                 case DGS_REFUND:
-                    return new DigitalGoodsRefund(buffer);
+                    return new DGSRefundAttachment(buffer);
 
                 case CRITICAL_UPDATE:
                     return new CriticalUpdate(buffer);
@@ -404,9 +482,9 @@ public class TxBuilder {
                 case TAGGED_DATA_EXTEND:
                     return new TaggedDataExtendAttachment(jsonObject);
                 case SHUFFLING_CREATION:
-                    return new ShufflingCreation(jsonObject);
+                    return new ShufflingCreationAttachment(jsonObject);
                 case SHUFFLING_REGISTRATION:
-                    return new ShufflingRegistration(jsonObject);
+                    return new ShufflingRegistrationAttachment(jsonObject);
                 case SHUFFLING_PROCESSING:
                     return new ShufflingProcessingAttachment(jsonObject);
                 case SHUFFLING_RECIPIENTS:
@@ -417,19 +495,19 @@ public class TxBuilder {
                     return new ShufflingCancellationAttachment(jsonObject);
 
                 case MS_CURRENCY_ISSUANCE:
-                    return new MonetarySystemCurrencyIssuance(jsonObject);
+                    return new MonetarySystemCurrencyIssuanceAttachment(jsonObject);
                 case MS_RESERVE_INCREASE:
-                    return new MonetarySystemReserveIncrease(jsonObject);
+                    return new MonetarySystemReserveIncreaseAttachment(jsonObject);
                 case MS_RESERVE_CLAIM:
-                    return new MonetarySystemReserveClaim(jsonObject);
+                    return new MSReserveClaimAttachment(jsonObject);
                 case MS_CURRENCY_TRANSFER:
-                    return new MonetarySystemCurrencyTransfer(jsonObject);
+                    return new MSCurrencyTransferAttachment(jsonObject);
                 case MS_PUBLISH_EXCHANGE_OFFER:
-                    return new MonetarySystemPublishExchangeOffer(jsonObject);
+                    return new MSPublishExchangeOfferAttachment(jsonObject);
                 case MS_EXCHANGE_BUY:
                     return new MonetarySystemExchangeBuyAttachment(jsonObject);
                 case MS_EXCHANGE_SELL:
-                    return new MonetarySystemExchangeSell(jsonObject);
+                    return new MSExchangeSellAttachment(jsonObject);
                 case MS_CURRENCY_MINTING:
                     return new MonetarySystemCurrencyMinting(jsonObject);
                 case MS_CURRENCY_DELETION:
@@ -437,36 +515,36 @@ public class TxBuilder {
                 case CC_ASSET_ISSUANCE:
                     return new ColoredCoinsAssetIssuance(jsonObject);
                 case CC_ASSET_TRANSFER:
-                    return new ColoredCoinsAssetTransfer(jsonObject);
+                    return new CCAssetTransferAttachment(jsonObject);
                 case CC_ASK_ORDER_PLACEMENT:
-                    return new ColoredCoinsAskOrderPlacement(jsonObject);
+                    return new CCAskOrderPlacementAttachment(jsonObject);
                 case CC_BID_ORDER_PLACEMENT:
-                    return new ColoredCoinsBidOrderPlacement(jsonObject);
+                    return new CCBidOrderPlacementAttachment(jsonObject);
                 case CC_ASK_ORDER_CANCELLATION:
                     return new ColoredCoinsAskOrderCancellation(jsonObject);
                 case CC_BID_ORDER_CANCELLATION:
                     return new ColoredCoinsBidOrderCancellation(jsonObject);
                 case CC_DIVIDEND_PAYMENT:
-                    return new ColoredCoinsDividendPayment(jsonObject);
+                    return new CCDividendPaymentAttachment(jsonObject);
                 case CC_ASSET_DELETE:
-                    return new ColoredCoinsAssetDelete(jsonObject);
+                    return new CCAssetDeleteAttachment(jsonObject);
 
                 case DGS_LISTING:
-                    return new DigitalGoodsListing(jsonObject);
+                    return new DGSListingAttachment(jsonObject);
                 case DGS_DELISTING:
-                    return new DigitalGoodsDelisting(jsonObject);
+                    return new DGSDelistingAttachment(jsonObject);
                 case DGS_CHANGE_PRICE:
-                    return new DigitalGoodsPriceChange(jsonObject);
+                    return new DGSPriceChangeAttachment(jsonObject);
                 case DGS_CHANGE_QUANTITY:
-                    return new DigitalGoodsQuantityChange(jsonObject);
+                    return new DGSQuantityChangeAttachment(jsonObject);
                 case DGS_PURCHASE:
-                    return new DigitalGoodsPurchase(jsonObject);
+                    return new DGSPurchaseAttachment(jsonObject);
                 case DGS_DELIVERY:
-                    return new DigitalGoodsDelivery(jsonObject);
+                    return new DGSDeliveryAttachment(jsonObject);
                 case DGS_FEEDBACK:
-                    return new DigitalGoodsFeedback(jsonObject);
+                    return new DGSFeedbackAttachment(jsonObject);
                 case DGS_REFUND:
-                    return new DigitalGoodsRefund(jsonObject);
+                    return new DGSRefundAttachment(jsonObject);
 
                 case CRITICAL_UPDATE:
                     return new CriticalUpdate(jsonObject);
@@ -498,12 +576,12 @@ public class TxBuilder {
         }
 
         @Override
-        public void doStateDependentValidation(Transaction transaction) throws AplException.ValidationException {
+        public void doStateDependentValidation(Transaction transaction) {
 
         }
 
         @Override
-        public void doStateIndependentValidation(Transaction transaction) throws AplException.ValidationException {
+        public void doStateIndependentValidation(Transaction transaction) {
 
         }
 
@@ -523,8 +601,9 @@ public class TxBuilder {
         }
 
         /**
-         * @return always true to make it possible to use {@link TransactionImpl#getCopyTxBytes()} method which will
-         * by default insert {@link com.apollocurrency.aplwallet.apl.core.app.GenesisImporter#CREATOR_ID} for txs without recipient,
+         * @return always true to make it possible to use {@link com.apollocurrency.aplwallet.apl.core.transaction.common.TxSerializer#serialize(Transaction, Result)}
+         * method to get serialized tx bytes which will by default
+         * insert {@link com.apollocurrency.aplwallet.apl.core.app.GenesisImporter#CREATOR_ID} for txs without recipient,
          * but this value is not initialized and always 0, which will lead to incorrect unsignedBytes sequence to sign
          */
         @Override
