@@ -53,6 +53,88 @@ The configuration files used are in conf folder, see: peers.json, peers-1t.json,
   ```
   ### Updater URL encryptor/decryptor
   The tool for updater url double encryption/decryption. See `bin/apl-rsadecrypt.sh` and `bin/apl-rsaencrypt.sh` for parameters details.
+  #### Example
+  __Encrypt Update Package URL (first iteration)__
+
+  Encrypting the following URL `https://s3.org/ApolloUpdate-1.51.0-Linux.jar` for Updater
+  * Build the Apollo-tools project (alternatively you may use binary distributions to avoid build from sources)
+  ```console
+  mvn clean install 
+   ```
+  * For Windows, substitute `C:\path\to\url` with absolute path to file with URL to encrypt and `C:\path\to\key`
+with absolute path to private key to encrypt with, then execute
+  ```console
+   bin\apl-rsaencrypt.sh --in C:\path\to\url --key C:\path\to\key
+   ```
+  * For Linux/MacOS, substitute `/path/to/url` with absolute path to file with URL to encrypt and `/path/to/key`
+    with absolute path to private key to encrypt with, then execute
+  ```console
+  ./bin/apl-rsaencrypt.sh --in /path/to/url --key /path/to/key
+  ```
+  * Check the output and copy the encrypted hexadecimal string under `Your encrypted message in hexadecimal format` line
+and save to any convenient file
+  * Verify that URL is correctly encrypted:
+
+__for Windows__
+```console
+bin/apl-rsadecrypt.bat --in /path/to/encryptedURL --key /path/to/cert --utf
+```
+__for Linux/MacOS__
+
+```console
+./bin/apl-rsadecrypt.sh --in /path/to/encryptedURL --key /path/to/cert --utf
+```
+, where substitute `/path/to/encryptedURL` with absolute path to file received after encryption where encrypted URL is
+located and `/path/to/cert` with absolute path to the certificate to decrypt 
+(which contains public key cryptographically linked with private key used for encryption)
+
+Verify that message under `Result message is` the same as you encrypted, if so then encryption procedure is OK
+
+__Encrypt Update Package URL (second iteration)__
+
+This encryption procedure is like the previous but as an input URL you will use an encrypted URL output from previous
+encryption step - first iteration (typically this output must be received from another person)
+
+Encrypting the following encrypted URL `9c907ce247b10af3a8429ef....` (1024 symbols total) for Updater
+* Build the Apollo-tools project (alternatively you may use binary distributions to avoid build from sources)
+  ```console
+  mvn clean install 
+   ```
+* For Windows, substitute `C:\path\to\url` with absolute path to file with encrypted hexadecimal URL to encrypt and `C:\path\to\key`
+  with absolute path to private key to encrypt with, then execute
+  ```console
+   bin\apl-rsaencrypt.sh --hex --in C:\path\to\url --key C:\path\to\key
+   ```
+* For Linux/MacOS, aubstitute `/path/to/url` with absolute path to file with encrypted hexadecimal URL to encrypt and `/path/to/key`
+  with absolute path to private key to encrypt with, then execute
+  ```console
+  ./bin/apl-rsaencrypt.sh --hex --in /path/to/url --key /path/to/key
+  ```
+* Check the output and copy the encrypted hexadecimal string under `Your encrypted message in hexadecimal format` line
+  and save to any convenient file - this is your complete Update Package Encrypted URL which consist of two parts (lines)
+  with length of 1024 symbols (512 bytes) for each
+* Verify that encryption was correct:
+
+__for Windows__
+```console
+bin/apl-rsadecrypt.bat --in /path/to/encryptedURL --key /path/to/cert
+```
+__for Linux/MacOS__
+
+```console
+./bin/apl-rsadecrypt.sh --in /path/to/encryptedURL --key /path/to/cert
+```
+, where substitute `/path/to/encryptedURL` with absolute path to file received after encryption where encrypted URL is
+located (two lines with 1024 symbols for each) and `/path/to/cert` with absolute path to the certificate to decrypt
+(which contains public key cryptographically linked with private key used for encryption)
+
+Verify that output in line ` Your decrypted message in hexadecimal format:` is the same as was input for encryption for
+the second Update URL encryption URL (output from first iteration). 
+
+Also you can decrypt it again using another 
+certificate to receive the original URL (use --utf key as in `first encryption iteration` verification routine)
+
+
   ### Offline transaction signer
   Accept list of unsigned transactions from the input file and sign one by one and then write to the specified output file
   Usage: `./bin/apl-sign.sh --input "/path/to/your/unsigned/txs"`
