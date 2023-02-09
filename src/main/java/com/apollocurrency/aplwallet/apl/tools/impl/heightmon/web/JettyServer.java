@@ -14,9 +14,9 @@ import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
 import org.jboss.weld.environment.servlet.Listener;
 import org.jboss.weld.module.web.servlet.WeldInitialListener;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.inject.Singleton;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.inject.Singleton;
 
 @Singleton
 public class JettyServer {
