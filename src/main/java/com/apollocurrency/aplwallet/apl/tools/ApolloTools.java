@@ -204,8 +204,8 @@ public class ApolloTools {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
             PeersConfig peersConfig = objectMapper.readValue(new File(peerFile), PeersConfig.class);
-            HeightMonitor hm = new HeightMonitor(heightMonitorCmd.frequency);
             HeightMonitorConfig config = new HeightMonitorConfig(peersConfig, heightMonitorCmd.intervals, heightMonitorCmd.port);
+            HeightMonitor hm = new HeightMonitor(heightMonitorCmd.frequency);
             hm.start(config);
             return 0;
         } catch (IOException e) {

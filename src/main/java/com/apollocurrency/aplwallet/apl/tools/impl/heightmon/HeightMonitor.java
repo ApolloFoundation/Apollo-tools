@@ -18,7 +18,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class HeightMonitor {
     private static final Logger log = getLogger(HeightMonitor.class);
-    private static final int DEFAULT_DELAY = 30;
+    private static final int DEFAULT_DELAY = 30; // seconds
 
     private ScheduledExecutorService executor;
     private int delay;
@@ -27,6 +27,7 @@ public class HeightMonitor {
     public HeightMonitor(Integer delay) {
         this.executor = Executors.newScheduledThreadPool(1);
         this.delay = delay == null ? DEFAULT_DELAY : delay;
+        log.debug("HeightMonitor will run with delay = {} sec", this.delay);
     }
 
     public HeightMonitor() {

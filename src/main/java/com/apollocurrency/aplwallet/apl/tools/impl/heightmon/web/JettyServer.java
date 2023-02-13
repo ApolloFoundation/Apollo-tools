@@ -4,6 +4,7 @@
 
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web;
 
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
@@ -18,9 +19,11 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 
+@Slf4j
 @Singleton
 public class JettyServer {
     private Server server;
+    public static final String rootPathSpec = "/rest/*";
 
     public JettyServer() {
         server = new Server();
@@ -32,6 +35,7 @@ public class JettyServer {
         connector.setHost("0.0.0.0");
         connector.setReuseAddress(true);
         server.addConnector(connector);
+        log.debug("Main Jetty ServerConnector = {}", connector);
         ServletContextHandler servletHandler = new ServletContextHandler();
         // --------- ADD REST support servlet (RESTEasy)
         ServletHolder restEasyServletHolder = new ServletHolder(new HttpServletDispatcher());
@@ -40,7 +44,8 @@ public class JettyServer {
 
         String restEasyAppClassName = RestEasyApplication.class.getName();
         restEasyServletHolder.setInitParameter("javax.ws.rs.Application", restEasyAppClassName);
-        servletHandler.addServlet(restEasyServletHolder, "/rest/*");
+        servletHandler.addServlet(restEasyServletHolder, rootPathSpec);
+        log.debug("Main Jetty REST API root path = '{}'", rootPathSpec);
         // init Weld here
         servletHandler.addEventListener(new WeldInitialListener());
         //need this listener to support scopes properly

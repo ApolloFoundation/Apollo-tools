@@ -6,7 +6,7 @@
   <groupId>com.apollocurrency</groupId>
   <artifactId>apl-tools</artifactId>
   <name>apl-tools</name>
-  <version>1.51.0</version>
+  <version>2.0.1</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -156,6 +156,10 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
     </dependency>
   </dependencies>
 

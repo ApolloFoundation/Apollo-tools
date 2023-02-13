@@ -31,6 +31,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -162,7 +163,8 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
 
     @Override
     public NetworkStats updateStats() {
-        log.info("===========================================");
+        long start = System.currentTimeMillis();
+        log.info("{} : ===========================================", new Date(start));
         Map<String, PeerMonitoringResult> peerBlocks = getPeersMonitoringResults();
         NetworkStats networkStats = new NetworkStats();
         for (PeerInfo peer : peers) {
@@ -202,6 +204,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             networkStats.getDiffForTime().put(maxBlocksDiffCounter.getPeriod(), maxBlocksDiffCounter.getValue());
         }
         lastStats.set(networkStats);
+        log.info("{} sec : ===========================================", (System.currentTimeMillis() - start) / 1_000);
         return networkStats;
     }
 
@@ -298,7 +301,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
 
     private List<ShardDTO> getShards(String peerUrl) {
         List<ShardDTO> shards = new ArrayList<>();
-        Request request = client.newRequest(peerUrl + "/rest/shards")
+        String uriToCall = peerUrl + "/rest/shards";
+        log.trace("Call to Shards = {}", uriToCall);
+        Request request = client.newRequest(uriToCall)
             .method(HttpMethod.GET);
         ContentResponse response;
         try {
@@ -306,45 +311,55 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             shards = objectMapper.readValue(response.getContentAsString(), new TypeReference<List<ShardDTO>>() {
             });
         } catch (InterruptedException | TimeoutException | ExecutionException | IOException e) {
-            log.error("Unable to get or parse response from {} - {}", peerUrl, e.toString());
+            log.error("Unable to get Shards or parse response from {} - {}", uriToCall, e.toString());
         } catch (Exception e) {
             log.error("Unknown exception:", e);
         }
+        log.trace("getShards result = {}", shards);
         return shards;
     }
 
     private int getPeerHeight(String peerUrl) {
-        JsonNode jsonNode = performRequest(peerUrl + "/apl", Map.of("requestType", "getBlock"));
+        String uriToCall = peerUrl + "/apl";
+        log.trace("Call to Remote = {}", uriToCall);
+        JsonNode jsonNode = performRequest(uriToCall, Map.of("requestType", "getBlock"));
+        int height = -1;
         if (jsonNode != null) {
-            return jsonNode.get("height").asInt();
+            height = jsonNode.get("height").asInt();
         }
-        return -1;
+        log.trace("peerHeight result = {}", height);
+        return height;
     }
 
     private long getPeerBlockId(String peerUrl, int height) {
-        JsonNode jsonNode = performRequest(peerUrl + "/apl", Map.of("requestType", "getBlockId", "height", height));
+        String uriToCall = peerUrl + "/apl";
+        JsonNode jsonNode = performRequest(uriToCall, Map.of("requestType", "getBlockId", "height", height));
         long blockId = 0;
         if (jsonNode != null) {
             blockId = Long.parseUnsignedLong(jsonNode.get("block").asText());
         }
+        log.trace("peerBlockId result = {}", blockId);
         return blockId;
     }
 
     private Block getPeerBlock(String peerUrl, int height) {
-        JsonNode node = performRequest(peerUrl + "/apl", Map.of("requestType", "getBlock", "height", height));
+        String uriToCall = peerUrl + "/apl";
+        JsonNode node = performRequest(uriToCall, Map.of("requestType", "getBlock", "height", height));
         Block block = null;
         if (node != null) {
             try {
                 block = objectMapper.readValue(node.toString(), Block.class);
             } catch (JsonProcessingException e) {
-                log.error("Unable to parse block from {}", node.toString());
+                log.error("Unable to parse block from {} by peerUrl = '{}' at height = {}", node, peerUrl, height);
             }
         }
+        log.trace("peerBlock result = {}", block);
         return block;
     }
 
     private JsonNode performRequest(String url, Map<String, Object> params) {
         JsonNode result = null;
+        log.trace("Call to Remote request = {} + {}", url, params);
         Request request = client.newRequest(url)
             .method(HttpMethod.GET);
         params.forEach((name, value) -> request.param(name, value.toString()));
@@ -360,6 +375,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
                     log.info("Error received from node: {} - {}", request.getURI(), jsonNode.get("errorDescription"));
                 } else {
                     result = jsonNode;
+                    log.trace("Call result = {}", result);
                 }
             }
         } catch (InterruptedException | TimeoutException | ExecutionException | IOException e) {
@@ -372,7 +388,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
 
     private Version getPeerVersion(String peerUrl) {
         Version res = DEFAULT_VERSION;
-        Request request = client.newRequest(peerUrl + "/apl")
+        String uriToCall = peerUrl + "/apl";
+        log.trace("Call to peerVersion = {}", uriToCall);
+        Request request = client.newRequest(uriToCall)
             .method(HttpMethod.GET)
             .param("requestType", "getBlockchainStatus");
         ContentResponse response = null;
@@ -380,10 +398,11 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             response = request.send();
             JsonNode jsonNode = objectMapper.readTree(response.getContentAsString());
             res = new Version(jsonNode.get("version").asText());
+            log.trace("Call result = {}", res);
         } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            log.error("Unable to get response from {} - {}", peerUrl, e.toString());
+            log.error("Unable to get peerVersion response from {} - {}", uriToCall, e.toString());
         } catch (IOException e) {
-            log.error("Unable to parse peer version from json for {} - {}", peerUrl, e.toString());
+            log.error("Unable to parse peerVersion from json for {} - {}", uriToCall, e.toString());
         }
         return res;
     }
