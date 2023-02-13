@@ -30,12 +30,15 @@ public class JettyServer {
         HttpConfiguration configuration = new HttpConfiguration();
         configuration.setSendDateHeader(false);
         configuration.setSendServerVersion(false);
-        ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(configuration));
+        HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory(configuration);
+
+        ServerConnector connector = new ServerConnector(server, httpConnectionFactory);
         connector.setPort(7872);
         connector.setHost("0.0.0.0");
         connector.setReuseAddress(true);
         server.addConnector(connector);
         log.debug("Main Jetty ServerConnector = {}", connector);
+
         ServletContextHandler servletHandler = new ServletContextHandler();
         // --------- ADD REST support servlet (RESTEasy)
         ServletHolder restEasyServletHolder = new ServletHolder(new HttpServletDispatcher());
@@ -43,7 +46,7 @@ public class JettyServer {
         restEasyServletHolder.setInitParameter("resteasy.injector.factory", "org.jboss.resteasy.cdi.CdiInjectorFactory");
 
         String restEasyAppClassName = RestEasyApplication.class.getName();
-        restEasyServletHolder.setInitParameter("javax.ws.rs.Application", restEasyAppClassName);
+        restEasyServletHolder.setInitParameter("jakarta.ws.rs.Application", restEasyAppClassName);
         servletHandler.addServlet(restEasyServletHolder, rootPathSpec);
         log.debug("Main Jetty REST API root path = '{}'", rootPathSpec);
         // init Weld here
