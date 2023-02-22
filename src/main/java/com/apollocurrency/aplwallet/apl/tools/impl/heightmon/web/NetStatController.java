@@ -5,10 +5,18 @@
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web;
 
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.HeightMonitorService;
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkEnum;
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkStatus;
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.HeightMonitorConfig;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.NetworkStats;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeerDiffStat;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeerInfo;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import jakarta.validation.constraints.NotNull;
@@ -20,16 +28,28 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Optional;
 
+@Slf4j
 @Path("/netstat")
 @Singleton
+@NoArgsConstructor
 public class NetStatController {
 
-    @Inject
     private HeightMonitorService heightMonitorService;
+    private HeightMonitorConfig config;
+
+
+    @Inject
+    public NetStatController(HeightMonitorService heightMonitorService) {
+        this.heightMonitorService = heightMonitorService;
+    }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -76,11 +96,61 @@ public class NetStatController {
             .stream()
             .filter(peerDiffStat -> peerDiffStat.getPeer1().equalsIgnoreCase(ip)
                 || peerDiffStat.getPeer2().equalsIgnoreCase(ip))
-            .collect(Collectors.toList());
+            .toList();
         if (diffStats.isEmpty()) {
             return Response.status(422, "No monitoring data found for peer " + ip).build();
         } else {
             return Response.ok(diffStats).build();
         }
+    }
+
+    @GET
+    @Path("/fork")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+        summary = "Returns fork status",
+        description = "Returns fork status. Possible values are: OK = 0, Warning = 1, Critical = 2",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Successful execution",
+                content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = ForkStatus.class)))
+        })
+    @PermitAll
+    public Response getForkStatus() {
+        if (this.config == null) {
+            this.config = heightMonitorService.getConfig();
+        }
+        List<Integer> maxBlocksDiffPeriods = this.config.getMaxBlocksDiffPeriods();
+        log.debug("maxBlocksDiffPeriods = [{}] / empty ? = {}", maxBlocksDiffPeriods.size(), maxBlocksDiffPeriods.isEmpty());
+        ForkStatus forkStatus = new ForkStatus();
+        if (maxBlocksDiffPeriods.isEmpty()) {
+            return Response.ok(forkStatus).build();
+        }
+        int minTimeValue = maxBlocksDiffPeriods.get(0);
+        log.debug("minTimeValue = {}", minTimeValue);
+        Optional<Map.Entry<Integer, Integer>> maxDiffAtLatestHour = heightMonitorService.getLastStats().getDiffForTime().entrySet().stream().filter(entry -> entry.getKey() == minTimeValue).findFirst();
+        if (maxDiffAtLatestHour.isEmpty()) {
+            log.debug("maxDiffAtLatestHour is empty !");
+            forkStatus = new ForkStatus();
+            return Response.ok(forkStatus).build();
+        }
+
+        Integer maxDiffMapValue = maxDiffAtLatestHour.get().getValue();
+        if (maxDiffMapValue < this.config.getPeersConfig().getCriticalLevel()
+            && maxDiffMapValue < this.config.getPeersConfig().getWarningLevel()) {
+            log.debug("OK level, max diff = {}", maxDiffMapValue);
+            forkStatus = new ForkStatus(ForkEnum.OK, maxDiffMapValue);
+
+        } else if (maxDiffMapValue < this.config.getPeersConfig().getCriticalLevel()
+            && maxDiffMapValue >= this.config.getPeersConfig().getWarningLevel()) {
+            log.debug("WARNING level, max diff = {}", maxDiffMapValue);
+            forkStatus = new ForkStatus(ForkEnum.WARNING, maxDiffMapValue);
+
+        } else if (maxDiffMapValue >= this.config.getPeersConfig().getCriticalLevel()
+            && maxDiffMapValue >= this.config.getPeersConfig().getWarningLevel()) {
+            log.debug("CRITICAL level, max diff = {}", maxDiffMapValue);
+            forkStatus = new ForkStatus(ForkEnum.CRITICAL, maxDiffMapValue);
+        }
+        return Response.ok(forkStatus).build();
     }
 }

@@ -16,6 +16,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
@@ -23,9 +25,7 @@ import org.eclipse.jetty.client.dynamic.HttpClientTransportDynamic;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.slf4j.Logger;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -42,18 +42,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static org.slf4j.LoggerFactory.getLogger;
 
+@Slf4j
 @Singleton
+@NoArgsConstructor
 public class HeightMonitorServiceImpl implements HeightMonitorService {
 
-    private static final Logger log = getLogger(HeightMonitorServiceImpl.class);
-
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final List<Integer> DEFAULT_PERIODS = List.of(1, 2, 4, 6, 8, 12, 24, 48, 96);
+    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 8, 12, 24, 48, 96);
     private static final int CONNECT_TIMEOUT = 5_000;
     private static final int IDLE_TIMEOUT = 5_000;
     private static final int BLOCKS_TO_RETRIEVE = 1000;
@@ -72,16 +70,16 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
     private List<String> peerApiUrls;
     private ExecutorService executor;
 
-    public HeightMonitorServiceImpl() {
-    }
-
-    @PostConstruct
     public void init() {
+        log.debug("Init HM Service...");
         client = createHttpClient();
         try {
             client.start();
-            executor = Executors.newFixedThreadPool(30);
+            int numberOfThreads = this.peers.size() * 3; // http client threads in pool
+            executor = Executors.newFixedThreadPool(numberOfThreads);
+            log.debug("HTTP client started with pool of '{}' threads...", numberOfThreads);
         } catch (Exception e) {
+            log.error("Http Client init error", e);
             throw new RuntimeException(e.toString(), e);
         }
     }
@@ -96,10 +94,10 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
     public void setUp(HeightMonitorConfig config) {
         PeersConfig peersConfig = config.getPeersConfig();
         this.port = peersConfig.getDefaultPort();
-        this.peers = Collections.synchronizedList(peersConfig.getPeersInfo().stream().peek(this::setDefaultPortIfNull).collect(Collectors.toList()));
+        this.peers = Collections.synchronizedList(peersConfig.getPeersInfo().stream().peek(this::setDefaultPortIfNull).toList());
         this.maxBlocksDiffCounters = createMaxBlocksDiffCounters(config.getMaxBlocksDiffPeriods() == null ? DEFAULT_PERIODS : config.getMaxBlocksDiffPeriods());
-        this.peerApiUrls = Collections.synchronizedList(this.peers.stream().map(this::createUrl).collect(Collectors.toList()));
-
+        this.peerApiUrls = Collections.synchronizedList(this.peers.stream().map(this::createUrl).toList());
+        init();
     }
 
     private PeerInfo setDefaultPortIfNull(PeerInfo peerInfo) {
@@ -154,11 +152,17 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
     }
 
     private List<MaxBlocksDiffCounter> createMaxBlocksDiffCounters(List<Integer> maxBlocksDiffPeriods) {
-        return maxBlocksDiffPeriods.stream().map(MaxBlocksDiffCounter::new).collect(Collectors.toList());
+        return maxBlocksDiffPeriods.stream().map(MaxBlocksDiffCounter::new).toList();
     }
 
+    @Override
     public NetworkStats getLastStats() {
         return lastStats.get();
+    }
+
+    @Override
+    public HeightMonitorConfig getConfig() {
+        return this.getConfig();
     }
 
     @Override
@@ -170,7 +174,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         for (PeerInfo peer : peers) {
             PeerMonitoringResult result = peerBlocks.get(peer.getHost());
             if (result != null) {
-                List<String> shardList = result.getShards().stream().map(this::getShardHashFormatted).collect(Collectors.toList());
+                List<String> shardList = result.getShards().stream().map(this::getShardHashFormatted).toList();
                 log.info(String.format("%-16.16s - %8d - %s", peer.getHost(), result.getHeight(), String.join("->", shardList)));
                 networkStats.getPeerHeight().put(peer.getHost(), result.getHeight());
                 networkStats.getPeerShards().put(peer.getHost(), shardList);
@@ -310,7 +314,10 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             response = request.send();
             shards = objectMapper.readValue(response.getContentAsString(), new TypeReference<List<ShardDTO>>() {
             });
-        } catch (InterruptedException | TimeoutException | ExecutionException | IOException e) {
+        } catch (InterruptedException e) {
+            log.error("Interrupted, unable to get Shards or parse response from {} - {}", uriToCall, e.toString());
+            Thread.currentThread().interrupt();
+        } catch (TimeoutException | ExecutionException | IOException e) {
             log.error("Unable to get Shards or parse response from {} - {}", uriToCall, e.toString());
         } catch (Exception e) {
             log.error("Unknown exception:", e);
@@ -378,8 +385,11 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
                     log.trace("Call result = {}", result);
                 }
             }
-        } catch (InterruptedException | TimeoutException | ExecutionException | IOException e) {
-            log.info("Unable to get or parse response from {} - {}", url, e.toString());
+        } catch (InterruptedException e) {
+            log.info("Interrupted, unable to get or parse response from {} {} - {}", url, params, e.toString());
+            Thread.currentThread().interrupt();
+        } catch (TimeoutException | ExecutionException | IOException e) {
+            log.info("Unable to get or parse response from {} {} - {}", url, params, e.toString());
         } catch (Exception e) {
             log.info("Unknown exception:", e);
         }
@@ -399,7 +409,10 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             JsonNode jsonNode = objectMapper.readTree(response.getContentAsString());
             res = new Version(jsonNode.get("version").asText());
             log.trace("Call result = {}", res);
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            log.error("Interrupted, unable to get peerVersion response from {} - {}", uriToCall, e.toString());
+            Thread.currentThread().interrupt();
+        } catch (TimeoutException | ExecutionException e) {
             log.error("Unable to get peerVersion response from {} - {}", uriToCall, e.toString());
         } catch (IOException e) {
             log.error("Unable to parse peerVersion from json for {} - {}", uriToCall, e.toString());
@@ -450,6 +463,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
 
         return block;
     }
+
 
 }
 

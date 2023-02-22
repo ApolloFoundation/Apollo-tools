@@ -21,4 +21,6 @@ public interface HeightMonitorService {
     boolean addPeer(PeerInfo peerInfo) throws UnknownHostException;
 
     List<PeerInfo> getAllPeers();
+
+    HeightMonitorConfig getConfig();
 }

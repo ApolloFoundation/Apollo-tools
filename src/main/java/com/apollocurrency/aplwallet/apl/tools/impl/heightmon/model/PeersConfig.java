@@ -11,11 +11,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public class PeersConfig {
-    private static final int DEFAULT_PORT = 7876;
-    private List<PeerInfo> peersInfo;
-    private int defaultPort;
-    private int warningLevel = 720; //number of blocks that forms fork
-    private int criticalLevel = 21000; // apl.maxRollback Apollo constant
+    private final List<PeerInfo> peersInfo;
+    private final int defaultPort;
+    private final int warningLevel; //number of blocks that forms fork
+    private final int criticalLevel; // apl.maxRollback Apollo constant
 
     @JsonCreator
     public PeersConfig(@JsonProperty("peersInfo") List<PeerInfo> peersInfo,
@@ -28,26 +27,19 @@ public class PeersConfig {
         this.criticalLevel = criticalLevel;
     }
 
-    public PeersConfig(@JsonProperty("peersInfo") List<PeerInfo> peersInfo,
-                       @JsonProperty("warningLevel") int warningLevel,
-                       @JsonProperty("criticalLevel") int criticalLevel
-                       ) {
-        this(peersInfo, DEFAULT_PORT, warningLevel, criticalLevel);
-    }
-
     public List<PeerInfo> getPeersInfo() {
         return peersInfo;
-    }
-
-    public void setPeersInfo(List<PeerInfo> peersInfo) {
-        this.peersInfo = peersInfo;
     }
 
     public int getDefaultPort() {
         return defaultPort;
     }
 
-    public void setDefaultPort(int defaultPort) {
-        this.defaultPort = defaultPort;
+    public int getWarningLevel() {
+        return warningLevel;
+    }
+
+    public int getCriticalLevel() {
+        return criticalLevel;
     }
 }

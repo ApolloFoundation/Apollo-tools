@@ -11,22 +11,23 @@ import org.slf4j.LoggerFactory;
 public class MaxBlocksDiffCounter {
     private static final Logger log = LoggerFactory.getLogger(MaxBlocksDiffCounter.class);
 
-    private int period;
+    private final int period;
     private int value;
-    private long lastResetTime = System.currentTimeMillis() / (1000 * 60);
+    private long lastResetTime;
 
     public MaxBlocksDiffCounter(int period) {
         this.period = period;
+        this.lastResetTime = System.currentTimeMillis() / (1000 * 60) * period;
     }
 
     public void update(int currentBlockDiff) {
         value = Math.max(value, currentBlockDiff);
-        log.info("MAX Blocks diff for last {}h is {} blocks", period, value);
         long currentTime = System.currentTimeMillis() / 1000 / 60;
-        if (currentTime - lastResetTime >= period * 60) {
+        if (currentTime - lastResetTime >= period * 60L) {
             lastResetTime = currentTime;
             value = currentBlockDiff;
         }
+        log.info("MAX Blocks diff for last {}h is {} blocks", period, value);
     }
 
     public int getValue() {
@@ -37,7 +38,4 @@ public class MaxBlocksDiffCounter {
         return period;
     }
 
-    public void setPeriod(int period) {
-        this.period = period;
-    }
 }
