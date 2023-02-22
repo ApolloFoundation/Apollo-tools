@@ -6,7 +6,6 @@ package com.apollocurrency.aplwallet.apl.tools;
 
 import com.apollocurrency.aplwallet.apl.crypto.Convert;
 import com.apollocurrency.aplwallet.apl.tools.impl.UpdaterUrlUtils;
-import io.smallrye.config.inject.ConfigProducerUtil;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 

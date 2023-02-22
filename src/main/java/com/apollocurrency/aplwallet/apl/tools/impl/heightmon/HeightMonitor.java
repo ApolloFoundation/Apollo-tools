@@ -9,7 +9,7 @@ import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web.JettyServer;
 import com.apollocurrency.aplwallet.apl.util.cdi.AplContainer;
 import org.slf4j.Logger;
 
-import javax.enterprise.inject.spi.CDI;
+import jakarta.enterprise.inject.spi.CDI;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +18,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 public class HeightMonitor {
     private static final Logger log = getLogger(HeightMonitor.class);
-    private static final int DEFAULT_DELAY = 30;
+    private static final int DEFAULT_DELAY = 30; // seconds
 
     private ScheduledExecutorService executor;
     private int delay;
@@ -27,6 +27,7 @@ public class HeightMonitor {
     public HeightMonitor(Integer delay) {
         this.executor = Executors.newScheduledThreadPool(1);
         this.delay = delay == null ? DEFAULT_DELAY : delay;
+        log.debug("HeightMonitor will run with delay = {} sec", this.delay);
     }
 
     public HeightMonitor() {

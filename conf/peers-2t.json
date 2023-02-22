@@ -1,6 +1,11 @@
 {
   "defaultPort": 7876,
+  "warningLevel" : 720,
+  "criticalLevel" : 2000,
   "peersInfo": [
+    {
+      "host": "localhost"
+    },
     {
       "host": "apl-t2-1.testnet2.apollowallet.org",
       "schema": "https"
