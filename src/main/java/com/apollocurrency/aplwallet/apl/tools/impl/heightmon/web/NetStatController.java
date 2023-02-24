@@ -43,7 +43,6 @@ import java.util.Optional;
 public class NetStatController {
 
     private HeightMonitorService heightMonitorService;
-    private HeightMonitorConfig config;
 
 
     @Inject
@@ -135,19 +134,20 @@ public class NetStatController {
             return Response.ok(forkStatus).build();
         }
 
+        int criticalLevel = config.getPeersConfig().getCriticalLevel();
+        int warningLevel = config.getPeersConfig().getWarningLevel();
         Integer maxDiffMapValue = maxDiffAtLatestHour.get().getValue();
-        if (maxDiffMapValue < this.config.getPeersConfig().getCriticalLevel()
-            && maxDiffMapValue < this.config.getPeersConfig().getWarningLevel()) {
+        if (maxDiffMapValue < criticalLevel
+            && maxDiffMapValue < warningLevel) {
             log.debug("OK level, max diff = {}", maxDiffMapValue);
             forkStatus = new ForkStatus(ForkEnum.OK, maxDiffMapValue);
 
-        } else if (maxDiffMapValue < this.config.getPeersConfig().getCriticalLevel()
-            && maxDiffMapValue >= this.config.getPeersConfig().getWarningLevel()) {
+        } else if (maxDiffMapValue < criticalLevel
+            && maxDiffMapValue >= warningLevel) {
             log.debug("WARNING level, max diff = {}", maxDiffMapValue);
             forkStatus = new ForkStatus(ForkEnum.WARNING, maxDiffMapValue);
 
-        } else if (maxDiffMapValue >= this.config.getPeersConfig().getCriticalLevel()
-            && maxDiffMapValue >= this.config.getPeersConfig().getWarningLevel()) {
+        } else if (maxDiffMapValue >= criticalLevel) {
             log.debug("CRITICAL level, max diff = {}", maxDiffMapValue);
             forkStatus = new ForkStatus(ForkEnum.CRITICAL, maxDiffMapValue);
         }

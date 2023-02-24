@@ -82,4 +82,14 @@ public class ShardDTO {
     public int hashCode() {
         return Objects.hash(shardId, shardHash, coreZipHash, prunableZipHash, shardHeight, shardState);
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("ShardDTO{");
+        sb.append("shardId=").append(shardId);
+        sb.append(", shardHash='").append(shardHash != null && shardHash.length() > 6 ? shardHash.substring(0, 6) : "error").append('\'');
+        sb.append(", shardHeight=").append(shardHeight);
+        sb.append('}');
+        return sb.toString();
+    }
 }
