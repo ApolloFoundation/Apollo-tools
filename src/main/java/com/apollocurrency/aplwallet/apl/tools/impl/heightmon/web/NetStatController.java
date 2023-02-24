@@ -116,10 +116,9 @@ public class NetStatController {
         })
     @PermitAll
     public Response getForkStatus() {
-        if (this.config == null) {
-            this.config = heightMonitorService.getConfig();
-        }
-        List<Integer> maxBlocksDiffPeriods = this.config.getMaxBlocksDiffPeriods();
+        log.debug("Getting getForkStatus...");
+        HeightMonitorConfig config = this.heightMonitorService.getConfig();
+        List<Integer> maxBlocksDiffPeriods = config.getMaxBlocksDiffPeriods();
         log.debug("maxBlocksDiffPeriods = [{}] / empty ? = {}", maxBlocksDiffPeriods.size(), maxBlocksDiffPeriods.isEmpty());
         ForkStatus forkStatus = new ForkStatus();
         if (maxBlocksDiffPeriods.isEmpty()) {

@@ -98,6 +98,7 @@ class NetStatControllerTest {
     @Test
     void getForkStatus_OK_level() {
         when(config.getMaxBlocksDiffPeriods()).thenReturn(List.of(0, 1, 2));
+        when(heightMonitorService.getConfig()).thenReturn(config);
         PeersConfig peersConfig = mock(PeersConfig.class);
         when(peersConfig.getWarningLevel()).thenReturn(720);
         when(peersConfig.getCriticalLevel()).thenReturn(2000);
@@ -126,6 +127,7 @@ class NetStatControllerTest {
     @Test
     void getForkStatus_WARN_level() {
         when(config.getMaxBlocksDiffPeriods()).thenReturn(List.of(0, 1, 2));
+        when(heightMonitorService.getConfig()).thenReturn(config);
         PeersConfig peersConfig = mock(PeersConfig.class);
         when(peersConfig.getWarningLevel()).thenReturn(720);
         when(peersConfig.getCriticalLevel()).thenReturn(2000);
@@ -154,6 +156,7 @@ class NetStatControllerTest {
     @Test
     void getForkStatus_CRITICAL_level() {
         when(config.getMaxBlocksDiffPeriods()).thenReturn(List.of(0, 1, 2));
+        when(heightMonitorService.getConfig()).thenReturn(config);
         PeersConfig peersConfig = mock(PeersConfig.class);
         when(peersConfig.getWarningLevel()).thenReturn(720);
         when(peersConfig.getCriticalLevel()).thenReturn(2000);
