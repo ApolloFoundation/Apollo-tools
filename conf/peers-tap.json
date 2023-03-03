@@ -2,6 +2,7 @@
   "defaultPort": 7876,
   "warningLevel" : 720,
   "criticalLevel" : 2000,
+  "skipNotRespondingHost" : false,
   "peersInfo": [
     {"host": "51.15.104.205"  , "schema": "http"},
     {"host": "51.15.85.92" , "schema": "http"},

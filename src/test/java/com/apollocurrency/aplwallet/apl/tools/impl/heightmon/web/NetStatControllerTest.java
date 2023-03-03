@@ -1,6 +1,7 @@
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web;
 
 import com.apollocurrency.aplwallet.api.dto.ShardDTO;
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.FetchHostResultService;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.HeightMonitorService;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkEnum;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkStatus;
@@ -42,12 +43,14 @@ class NetStatControllerTest {
     @Mock
     private HeightMonitorService heightMonitorService;
     @Mock
+    private FetchHostResultService fetchHostResultService;
+    @Mock
     private HeightMonitorConfig config;
 
     @BeforeEach
     void setUp() {
         this.dispatcher = MockDispatcherFactory.createDispatcher();
-        this.controller = new NetStatController(heightMonitorService);
+        this.controller = new NetStatController(heightMonitorService, fetchHostResultService);
         dispatcher.getRegistry().addSingletonResource(controller);
     }
 

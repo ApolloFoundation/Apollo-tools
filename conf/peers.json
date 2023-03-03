@@ -2,6 +2,7 @@
   "defaultPort": 7876,
   "warningLevel" : 720,
   "criticalLevel" : 21000,
+  "skipNotRespondingHost" : true,
   "peersInfo": [
 
     {"host": "3.141.234.52",   "schema": "https"},

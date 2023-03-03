@@ -9,149 +9,40 @@ import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.NetworkStats;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeerDiffStat;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeerInfo;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeerMonitoringResult;
-import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.PeersConfig;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ShardDTO;
-import com.apollocurrency.aplwallet.apl.util.Version;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.ContentResponse;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.dynamic.HttpClientTransportDynamic;
-import org.eclipse.jetty.http.HttpMethod;
-import org.eclipse.jetty.io.ClientConnector;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
 
-import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 @Slf4j
 @Singleton
 @NoArgsConstructor
 public class HeightMonitorServiceImpl implements HeightMonitorService {
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 8, 12, 24, 48, 96);
-    private static final int CONNECT_TIMEOUT = 5_000;
-    private static final int IDLE_TIMEOUT = 5_000;
-    private static final int BLOCKS_TO_RETRIEVE = 1000;
-    private static final Version DEFAULT_VERSION = new Version("0.0.0");
-    private static final String URL_FORMAT = "%s://%s:%d";
-
-    static {
-        objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
-    }
-
+    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 5, 6, 8, 10, 12);
     private final AtomicReference<NetworkStats> lastStats = new AtomicReference<>(new NetworkStats());
-    private HttpClient client;
-    private List<PeerInfo> peers;
     private List<MaxBlocksDiffCounter> maxBlocksDiffCounters;
-    private int port;
-    private List<String> peerApiUrls;
-    private ExecutorService executor;
     private HeightMonitorConfig config;
+    private FetchHostResultService fetchHostResultService; // service to fetch response from hosts
+    private boolean skipNotRespondingHost; // skip from processing and showing 'not live' hosts in final result
 
     public void init() {
         log.debug("Init HM Service...");
-        client = createHttpClient();
-        try {
-            client.start();
-            int numberOfThreads = this.peers.size() * 3; // http client threads in pool
-            executor = Executors.newFixedThreadPool(numberOfThreads);
-            log.debug("HTTP client started with pool of '{}' threads...", numberOfThreads);
-        } catch (Exception e) {
-            log.error("Http Client init error", e);
-            throw new RuntimeException(e.toString(), e);
-        }
-    }
-
-
-    @Override
-    public List<PeerInfo> getAllPeers() {
-        return peers;
+        this.fetchHostResultService = new FetchHostResultServiceImpl(this.config);
     }
 
     @Override
     public void setUp(HeightMonitorConfig config) {
         this.config = config;
-        PeersConfig peersConfig = this.config.getPeersConfig();
-        this.port = peersConfig.getDefaultPort();
-        this.peers = Collections.synchronizedList(peersConfig.getPeersInfo().stream().peek(this::setDefaultPortIfNull).toList());
         this.maxBlocksDiffCounters = createMaxBlocksDiffCounters(config.getMaxBlocksDiffPeriods() == null ? DEFAULT_PERIODS : config.getMaxBlocksDiffPeriods());
         this.config.setMaxBlocksDiffPeriods(config.getMaxBlocksDiffPeriods() == null ? DEFAULT_PERIODS : config.getMaxBlocksDiffPeriods());
-        this.peerApiUrls = Collections.synchronizedList(this.peers.stream().map(this::createUrl).toList());
+        this.skipNotRespondingHost = this.config.getPeersConfig().isSkipNotRespondingHost();
         init();
-    }
-
-    private PeerInfo setDefaultPortIfNull(PeerInfo peerInfo) {
-        if (peerInfo.getPort() == null) {
-            peerInfo.setPort(port);
-        }
-        return peerInfo;
-    }
-
-    @Override
-    public boolean addPeer(PeerInfo peer) {
-        Objects.requireNonNull(peer);
-        setDefaultPortIfNull(peer);
-        String url = createUrl(peer);
-        boolean result = false;
-        if (!peers.contains(peer)) {
-            result = true;
-            peers.add(peer);
-            peerApiUrls.add(url);
-            log.info("Added new peer: {}", peer.getHost());
-        }
-        return result;
-    }
-
-    private String createUrl(PeerInfo peerInfo) {
-        return String.format(URL_FORMAT, peerInfo.getSchema(), peerInfo.getHost(), peerInfo.getPort());
-    }
-
-
-    @PreDestroy
-    public void shutdown() {
-        try {
-            client.stop();
-            executor.shutdownNow();
-        } catch (Exception e) {
-            throw new RuntimeException(e.toString(), e);
-        }
-    }
-
-    private HttpClient createHttpClient() {
-        SslContextFactory.Client sslContextFactory = new SslContextFactory.Client();
-        sslContextFactory.setTrustAll(true);
-
-        ClientConnector clientConnector = new ClientConnector();
-        clientConnector.setSslContextFactory(sslContextFactory);
-
-        HttpClient httpClient = new HttpClient(new HttpClientTransportDynamic(clientConnector));
-        httpClient.setIdleTimeout(IDLE_TIMEOUT);
-        httpClient.setConnectTimeout(CONNECT_TIMEOUT);
-        httpClient.setFollowRedirects(false);
-        return httpClient;
     }
 
     private List<MaxBlocksDiffCounter> createMaxBlocksDiffCounters(List<Integer> maxBlocksDiffPeriods) {
@@ -172,9 +63,10 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
     public NetworkStats updateStats() {
         long start = System.currentTimeMillis();
         log.info("=========================================== : started at {}", new Date(start));
-        Map<String, PeerMonitoringResult> peerBlocks = getPeersMonitoringResults();
+        Map<String, PeerMonitoringResult> peerBlocks = this.fetchHostResultService.getPeersMonitoringResults();
         NetworkStats networkStats = new NetworkStats();
-        for (PeerInfo peer : peers) {
+        List<PeerInfo> allPeers = this.fetchHostResultService.getAllPeers();
+        for (PeerInfo peer : allPeers) {
             PeerMonitoringResult result = peerBlocks.get(peer.getHost());
             if (result != null) {
                 List<String> shardList = result.getShards().stream().map(this::getShardHashFormatted).toList();
@@ -185,19 +77,20 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         log.info(String.format("%7.7s %7.7s %-16.16s %-16.16s %9.9s %7.7s %7.7s %8.8s %8.8s %-13.13s %-13.13s %20.20s", "diff1", "diff2", "peer1", "peer2", "milestone", "height1", "height2", "version1", "version2", "shard1", "shard2", "shard-status"));
         int currentMaxBlocksDiff = -1;
-        for (int i = 0; i < peers.size(); i++) {
-            String host1 = peers.get(i).getHost();
+        for (int i = 0; i < allPeers.size(); i++) {
+            String host1 = allPeers.get(i).getHost();
             PeerMonitoringResult targetMonitoringResult = peerBlocks.get(host1);
-            if (!targetMonitoringResult.isLiveHost()) {
+            if (this.skipNotRespondingHost && !targetMonitoringResult.isLiveHost()) {
                 continue;
             }
-            for (int j = i + 1; j < peers.size(); j++) {
-                String host2 = peers.get(j).getHost();
+            for (int j = i + 1; j < allPeers.size(); j++) {
+                String host2 = allPeers.get(j).getHost();
                 PeerMonitoringResult comparedMonitoringResult = peerBlocks.get(host2);
-                if (!comparedMonitoringResult.isLiveHost()) {
+                if (this.skipNotRespondingHost && !comparedMonitoringResult.isLiveHost()) {
                     continue;
                 }
-                Block lastMutualBlock = targetMonitoringResult.getPeerMutualBlocks().get(peerApiUrls.get(j));
+                Block lastMutualBlock = targetMonitoringResult.getPeerMutualBlocks().get(
+                    this.fetchHostResultService.getPeerApiUrls().get(j));
                 int lastHeight = targetMonitoringResult.getHeight();
                 int blocksDiff1 = getBlockDiff(lastMutualBlock, lastHeight);
                 int blocksDiff2 = getBlockDiff(lastMutualBlock, comparedMonitoringResult.getHeight());
@@ -213,8 +106,12 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         log.info("======== Current max diff {} =========", currentMaxBlocksDiff);
         networkStats.setCurrentMaxDiff(currentMaxBlocksDiff);
         for (MaxBlocksDiffCounter maxBlocksDiffCounter : maxBlocksDiffCounters) {
-            maxBlocksDiffCounter.update(currentMaxBlocksDiff);
-            networkStats.getDiffForTime().put(maxBlocksDiffCounter.getPeriod(), maxBlocksDiffCounter.getValue());
+            boolean updateResult = maxBlocksDiffCounter.update(currentMaxBlocksDiff);
+            if (updateResult) {
+                networkStats.getDiffForTime().put(maxBlocksDiffCounter.getPeriod(), maxBlocksDiffCounter.getValue());
+            } else {
+                networkStats.getDiffForTime().putIfAbsent(maxBlocksDiffCounter.getPeriod(), maxBlocksDiffCounter.getValue());
+            }
         }
         lastStats.set(networkStats);
         log.info("=========================================== : finished in {} sec", (System.currentTimeMillis() - start) / 1_000);
@@ -232,7 +129,12 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
 
     private String getShardHashFormatted(ShardDTO shardDTO) {
         String prunableZipHash = shardDTO.getPrunableZipHash();
-        return shardDTO.getCoreZipHash().substring(0, 6) + (prunableZipHash != null ? ":" + prunableZipHash.substring(0, 6) : "");
+        String coreZipHash = shardDTO.getCoreZipHash();
+        if (coreZipHash != null) {
+            return coreZipHash.substring(0, 6) + (prunableZipHash != null ? ":" + prunableZipHash.substring(0, 6) : "");
+        } else {
+            return "??????";
+        }
     }
 
     private String getShardsStatus(PeerMonitoringResult targetMonitoringResult, PeerMonitoringResult comparedMonitoringResult) {
@@ -281,7 +183,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         return blocksDiff;
     }
-
+/*
     private Map<String, PeerMonitoringResult> getPeersMonitoringResults() {
         Map<String, PeerMonitoringResult> peerBlocks = new HashMap<>(peerApiUrls.size());
         List<CompletableFuture<PeerMonitoringResult>> getBlocksRequests = new ArrayList<>(peerApiUrls.size());
@@ -314,8 +216,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             }
         }
         return peerBlocks;
-    }
+    }*/
 
+/*
     private List<ShardDTO> getShards(String peerUrl) {
         List<ShardDTO> shards = new ArrayList<>();
         String uriToCall = peerUrl + "/rest/shards";
@@ -335,8 +238,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         log.trace("getShards result = {} by uri='{}'", shards, uriToCall);
         return shards;
     }
+*/
 
-    private int getPeerHeight(String peerUrl) {
+/*    private int getPeerHeight(String peerUrl) {
         String uriToCall = peerUrl + "/apl";
         log.trace("Call to Remote = {}", uriToCall);
         JsonNode jsonNode = performRequest(uriToCall, Map.of("requestType", "getBlock"));
@@ -346,9 +250,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         log.trace("getBlock peerHeight result = {} by uri='{}'", height, uriToCall);
         return height;
-    }
+    }*/
 
-    private long getPeerBlockId(String peerUrl, int height) {
+/*    private long getPeerBlockId(String peerUrl, int height) {
         String uriToCall = peerUrl + "/apl";
         JsonNode jsonNode = performRequest(uriToCall, Map.of("requestType", "getBlockId", "height", height));
         long blockId = -1;
@@ -357,9 +261,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         log.trace("peerBlockId result = {}", blockId);
         return blockId;
-    }
+    }*/
 
-    private Block getPeerBlock(String peerUrl, int height) {
+/*    private Block getPeerBlock(String peerUrl, int height) {
         String uriToCall = peerUrl + "/apl";
         JsonNode node = performRequest(uriToCall, Map.of("requestType", "getBlock", "height", height));
         Block block = null;
@@ -372,9 +276,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         log.trace("peerBlock result = {}", block);
         return block;
-    }
+    }*/
 
-    private JsonNode performRequest(String url, Map<String, Object> params) {
+/*    private JsonNode performRequest(String url, Map<String, Object> params) {
         JsonNode result = null;
         log.trace("Call to Remote request = {} + {}", url, params);
         Request request = client.newRequest(url)
@@ -401,9 +305,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             log.info("Unknown exception:", e);
         }
         return result;
-    }
+    }*/
 
-    private Version getPeerVersion(String peerUrl) {
+/*    private Version getPeerVersion(String peerUrl) {
         Version res = DEFAULT_VERSION;
         String uriToCall = peerUrl + "/apl";
         log.trace("Call to peerVersion = {}", uriToCall);
@@ -422,9 +326,9 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             log.error("Unable to parse peerVersion from json for {} - {}", uriToCall, e.toString());
         }
         return res;
-    }
+    }*/
 
-    private Block findLastMutualBlock(int height1, int height2, String host1, String host2) {
+/*    private Block findLastMutualBlock(int height1, int height2, String host1, String host2) {
         if (height2 == -1 || height1 == -1) {
             return null;
         }
@@ -466,7 +370,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
 
         return block;
-    }
+    }*/
 
 
 }

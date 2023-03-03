@@ -4,6 +4,7 @@
 
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web;
 
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.FetchHostResultService;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.HeightMonitorService;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkEnum;
 import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.model.ForkStatus;
@@ -43,11 +44,14 @@ import java.util.Optional;
 public class NetStatController {
 
     private HeightMonitorService heightMonitorService;
+    private FetchHostResultService fetchHostResultService;
 
 
     @Inject
-    public NetStatController(HeightMonitorService heightMonitorService) {
+    public NetStatController(HeightMonitorService heightMonitorService,
+                             FetchHostResultService fetchHostResultService) {
         this.heightMonitorService = heightMonitorService;
+        this.fetchHostResultService = fetchHostResultService;
     }
 
     @GET
@@ -65,7 +69,7 @@ public class NetStatController {
     @Path("/peers")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllPeers() {
-        return Response.ok(heightMonitorService.getAllPeers()).build();
+        return Response.ok(fetchHostResultService.getAllPeers()).build();
     }
 
     @POST
@@ -80,7 +84,7 @@ public class NetStatController {
             if (port != null) {
                 peerInfo.setPort(port);
             }
-            return Response.ok(heightMonitorService.addPeer(peerInfo)).build();
+            return Response.ok(fetchHostResultService.addPeer(peerInfo)).build();
         } catch (UnknownHostException e) {
             return Response.status(422, e.getLocalizedMessage()).build();
         }

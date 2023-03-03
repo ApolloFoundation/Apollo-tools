@@ -13,18 +13,21 @@ import java.util.List;
 public class PeersConfig {
     private final List<PeerInfo> peersInfo;
     private final int defaultPort;
-    private final int warningLevel; //number of blocks that forms fork
+    private final int warningLevel; //number of blocks that considered as a fork
     private final int criticalLevel; // apl.maxRollback Apollo constant
+    private final boolean skipNotRespondingHost; // skip not responding host from processing
 
     @JsonCreator
     public PeersConfig(@JsonProperty("peersInfo") List<PeerInfo> peersInfo,
                        @JsonProperty("defaultPort") int defaultPort,
                        @JsonProperty("warningLevel") int warningLevel,
-                       @JsonProperty("criticalLevel") int criticalLevel) {
+                       @JsonProperty("criticalLevel") int criticalLevel,
+                       @JsonProperty("skipNotRespondingHost") boolean skipNotRespondingHost) {
         this.peersInfo = peersInfo;
         this.defaultPort = defaultPort;
         this.warningLevel = warningLevel;
         this.criticalLevel = criticalLevel;
+        this.skipNotRespondingHost = skipNotRespondingHost;
     }
 
     public List<PeerInfo> getPeersInfo() {
@@ -41,5 +44,9 @@ public class PeersConfig {
 
     public int getCriticalLevel() {
         return criticalLevel;
+    }
+
+    public boolean isSkipNotRespondingHost() {
+        return skipNotRespondingHost;
     }
 }
