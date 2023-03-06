@@ -26,8 +26,8 @@ public class NetworkStats {
         this.peerShards = peerShards;
     }
 
-    public NetworkStats() {
-        this(new ArrayList<>(), -1, new LinkedHashMap<>(), new HashMap<>(), new HashMap<>());
+    public NetworkStats(int size) {
+        this(new ArrayList<>(), -1, new LinkedHashMap<>(size), new HashMap<>(), new HashMap<>());
     }
 
     public Map<String, List<String>> getPeerShards() {

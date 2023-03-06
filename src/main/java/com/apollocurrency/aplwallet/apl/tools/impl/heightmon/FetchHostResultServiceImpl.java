@@ -58,7 +58,7 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
     }
 
     public FetchHostResultServiceImpl(HeightMonitorConfig config) {
-        log.debug("Init HM Service...");
+        log.debug("Init FetchHostResultService...");
         this.config = config;
         PeersConfig peersConfig = this.config.getPeersConfig();
         this.port = peersConfig.getDefaultPort();
@@ -112,9 +112,10 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
             getBlocksRequests.add(CompletableFuture.supplyAsync(() -> {
                 Map<String, Block> blocks = new HashMap<>();
                 int height1 = getPeerHeight(peerUrl);
-                log.debug("processing peerUrl = '{}'", peerUrl);
+                log.trace("processing peerUrl = '{}'", peerUrl);
+                int height2 = 0;
                 for (int j = finalI + 1; j < peerApiUrls.size(); j++) {
-                    int height2 = getPeerHeight(peerApiUrls.get(j));
+                    height2 = getPeerHeight(peerApiUrls.get(j));
                     Block lastMutualBlock = findLastMutualBlock(height1, height2, peerUrl, peerApiUrls.get(j));
                     if (lastMutualBlock != null) {
                         blocks.put(peerApiUrls.get(j), lastMutualBlock);
@@ -123,7 +124,8 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
                 Version version = getPeerVersion(peerUrl);
                 List<ShardDTO> shards = getShards(peerUrl);
                 log.debug("DONE peerUrl = '{}' is live='{}'", peerUrl, height1 != -1);
-                return new PeerMonitoringResult(peerUrl, shards, height1, version, blocks, height1 != -1);
+                return new PeerMonitoringResult(peerUrl, shards, height1, version, blocks,
+                    height1 != -1, height2, this.config.getPeersConfig().getCriticalLevel());
             }, executor));
         }
         for (int i = 0; i < getBlocksRequests.size(); i++) {
@@ -250,27 +252,34 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
     }
 
     private Block findLastMutualBlock(int height1, int height2, String host1, String host2) {
+        log.trace("find Mutual between '{}' ({}) vs '{}' ({}) ...", host1, height1, host2, height2);
         if (height2 == -1 || height1 == -1) {
             return null;
         }
         int minHeight = Math.min(height1, height2);
         int stHeight = minHeight;
-        int step = 1024;
+        int step = 1;
         int firstMatchHeight = -1;
+        int mutualSearchDeepCount = BLOCKS_TO_RETRIEVE;
         while (true) {
             long peer1BlockId = getPeerBlockId(host1, stHeight);
             long peer2BlockId = getPeerBlockId(host2, stHeight);
-            if (peer2BlockId > 0 && peer1BlockId == peer2BlockId) {
+            if ((peer1BlockId == peer2BlockId) && (peer2BlockId > 0)) {
                 firstMatchHeight = stHeight;
+                log.debug("found Mutual between '{}' ({}) vs '{}' ({}), match = {}", host1, height1, host2, height2, stHeight);
                 break;
             } else {
-                if (stHeight <= 0) {
-//                    break;
+                if (stHeight <= 0 || mutualSearchDeepCount <= 0) {
+                    log.debug("NOT found Mutual between '{}' ({}) vs '{}' ({}), match = {}, mutualSearchDeepCount = {}",
+                        host1, height1, host2, height2, stHeight, mutualSearchDeepCount);
                     return null; // errors getting common block, 0 is reached (no network or similar)
                 }
                 stHeight = Math.max(0, stHeight - step);
                 step *= 2;
             }
+            mutualSearchDeepCount--;
+            log.trace("nextLoop '{}' ({} / id = {}) vs '{}' ({} / id = {}), stHeight = {}, step = {}, mutualSearchDeepCount = {}",
+                host1, height1, peer1BlockId, host2, height2, peer2BlockId, stHeight, step, mutualSearchDeepCount);
         }
         Block block = null;
         if (firstMatchHeight != -1) {
