@@ -5,47 +5,46 @@
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+@Slf4j
 public class MaxBlocksDiffCounter {
-    private static final Logger log = LoggerFactory.getLogger(MaxBlocksDiffCounter.class);
 
     private final int period;
     private int value;
-//    private long lastResetTime;
-    private LocalDateTime lastUpdateTime;
+    private LocalDateTime createdDateTime;
     private Duration durationOnPeriod;
 
     public MaxBlocksDiffCounter(int period) {
         this.period = period;
-//        this.lastResetTime = System.currentTimeMillis() / (1000 * 60 * 60) * period;
-        this.durationOnPeriod = Duration.ofMinutes(period);
 //        this.durationOnPeriod = Duration.ofHours(period);
-        this.lastUpdateTime =
+        this.durationOnPeriod = Duration.ofMinutes(period);
+        this.createdDateTime =
             LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault())
                 .plus(this.durationOnPeriod);
-        log.debug("Created for date-time : {}", this.lastUpdateTime);
+        log.debug("Created for date-time : {}", this.createdDateTime);
     }
 
-    public boolean update(int currentBlockDiff) {
-        boolean result = false;
-//        long currentTime = System.currentTimeMillis() / (1000 * 60 * 60);
+    public int update(int index, int currentBlockDiff) {
+        int result = -1;
         LocalDateTime currentTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault());
-        LocalDateTime timeDifference = this.lastUpdateTime.minus(durationOnPeriod);
-        log.debug("currentTime = '{}', lastResetTime = '{}' (time-diff = {}), period = '{}' >= ? {}",
-            currentTime, lastUpdateTime, timeDifference, period, (this.lastUpdateTime.isEqual(currentTime) || this.lastUpdateTime.isAfter(currentTime)));
-        if (this.lastUpdateTime.isEqual(currentTime) || this.lastUpdateTime.isAfter(currentTime)) {
-            lastUpdateTime = currentTime;
-            value = Math.max(value, currentBlockDiff);
-            result = true;
+        log.debug("period = [{}], createdDateTime = '{}', currentTime = '{}' > ? {}",
+            period, createdDateTime, currentTime, (currentTime.isAfter(this.createdDateTime)));
+        if (currentTime.isAfter(this.createdDateTime)) {
+//            value = Math.max(value, currentBlockDiff);
+            result = this.value;
+            if (index == 0) {
+                this.value = currentBlockDiff;
+            } else {
+                this.value = Math.max(value, currentBlockDiff);
+            }
         }
-        log.info("MAX Blocks diff for last {}h is {} blocks {}", period, value, result ? "*" : "");
+        log.info("MAX Blocks diff for last {}h is {} blocks {}", period, this.value, result != -1 ? "*" : "");
         return result;
     }
 
