@@ -33,7 +33,9 @@ public class PeerMonitoringResult {
         this.version = version;
         this.peerMutualBlocks = peerMutualBlocks;
         this.isLiveHost = isLiveHost;
-        if (isLiveHost && this.peerMutualBlocks != null && this.peerMutualBlocks.values().stream().findFirst().isPresent()) {
+        if (isLiveHost && this.peerMutualBlocks != null
+            && this.peerMutualBlocks.values().stream().findFirst().isPresent()
+            && height2 > 0) {
             // we evaluate peer downloading BH if it has difference between 'mutual block height' bigger then 'critical' config value
             this.isDownloading =
                 Math.abs(this.peerMutualBlocks.values().stream().findFirst().get().getHeight() - height2) > criticalHeightValue;
