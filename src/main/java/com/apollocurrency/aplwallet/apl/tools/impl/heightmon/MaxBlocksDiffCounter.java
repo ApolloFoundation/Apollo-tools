@@ -22,20 +22,18 @@ public class MaxBlocksDiffCounter {
 
     public MaxBlocksDiffCounter(int period) {
         this.period = period;
-//        this.durationOnPeriod = Duration.ofHours(period);
-        this.durationOnPeriod = Duration.ofMinutes(period);
-        this.createdDateTime =
-            LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault())
+        this.durationOnPeriod = Duration.ofHours(period);
+//        this.durationOnPeriod = Duration.ofMinutes(period);
+        this.createdDateTime = LocalDateTime.now()
                 .plus(this.durationOnPeriod);
         log.debug("Created for date-time : {}", this.createdDateTime);
     }
 
     public int update(int index, int currentBlockDiff) {
         int result = -1;
-        LocalDateTime currentTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault());
-        LocalDateTime currentTime2 = LocalDateTime.now();
-        log.trace("period = [{}], createdDateTime = '{}', currentTime = '{}' / {} > ? {}",
-            period, createdDateTime, currentTime, currentTime2, (currentTime.isAfter(this.createdDateTime)));
+        LocalDateTime currentTime = LocalDateTime.now();
+        log.trace("period = [{}], createdDateTime = '{}', currentTime = '{}' > ? {}",
+            period, createdDateTime, currentTime, (currentTime.isAfter(this.createdDateTime)));
         if (currentTime.isAfter(this.createdDateTime)) {
             result = this.value;
             if (index == 0) {
