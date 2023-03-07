@@ -94,8 +94,12 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
     @PreDestroy
     public void shutdown() {
         try {
-            client.stop();
-            executor.shutdownNow();
+            if (this.client != null) {
+                client.stop();
+            }
+            if (this.executor != null) {
+                executor.shutdownNow();
+            }
         } catch (Exception e) {
             log.error("FetchHostResultService shutdown error...", e);
 //            throw new RuntimeException(e.toString(), e);
@@ -266,7 +270,7 @@ public class FetchHostResultServiceImpl implements FetchHostResultService {
             long peer2BlockId = getPeerBlockId(host2, stHeight);
             if ((peer1BlockId == peer2BlockId) && (peer2BlockId > 0)) {
                 firstMatchHeight = stHeight;
-                log.debug("found Mutual between '{}' ({}) vs '{}' ({}), match = {}", host1, height1, host2, height2, stHeight);
+                log.trace("found Mutual between '{}' ({}) vs '{}' ({}), match = {}", host1, height1, host2, height2, stHeight);
                 break;
             } else {
                 if (stHeight <= 0 || mutualSearchDeepCount <= 0) {
