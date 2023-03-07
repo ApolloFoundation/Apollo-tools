@@ -24,7 +24,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Singleton
 @NoArgsConstructor
 public class HeightMonitorServiceImpl implements HeightMonitorService {
-    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 5, 6, 8, 10, 12);
+//    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 5, 6, 8, 10, 12);
+    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 6, 8, 10, 14, 20);
     private final AtomicReference<NetworkStats> lastStats = new AtomicReference<>(new NetworkStats(DEFAULT_PERIODS.size()));
     private List<MaxBlocksDiffCounter> maxBlocksDiffCounters;
     private HeightMonitorConfig config;
@@ -116,21 +117,19 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         networkStats.setCurrentMaxDiff(currentMaxBlocksDiff);
         for (int i = 0; i < maxBlocksDiffCounters.size(); i++) {
             MaxBlocksDiffCounter maxBlocksDiffCounter = maxBlocksDiffCounters.get(i);
-            int moveToNextPeriod = maxBlocksDiffCounter.update(i, currentMaxBlocksDiff);
-            if (i == 0) {
-                // first item
+            // replace 'currentMaxBlocksDiff' with value from maxBlocksDiffCounter after update()
+            currentMaxBlocksDiff = maxBlocksDiffCounter.update(i, currentMaxBlocksDiff);
+            if (currentMaxBlocksDiff >= 0) {
                 networkStats.getDiffForTime().put(maxBlocksDiffCounter.getPeriod(), currentMaxBlocksDiff);
-            } else if (i == maxBlocksDiffCounters.size() - 1) {
-                // last item
-                networkStats.getDiffForTime().put(maxBlocksDiffCounter.getPeriod(), currentMaxBlocksDiff);
-            } else {
-                // items that are inside 'min & max' indexes, we shift updated value to next map's bucket
-                if (moveToNextPeriod > 0) {
-                    maxBlocksDiffCounter = maxBlocksDiffCounters.get(i + 1);
-                    currentMaxBlocksDiff = networkStats.getDiffForTime().replace(maxBlocksDiffCounter.getPeriod(), moveToNextPeriod);
-                } else {
-                    networkStats.getDiffForTime().putIfAbsent(maxBlocksDiffCounter.getPeriod(), maxBlocksDiffCounter.getValue());
+                // check reset condition
+                if (i == maxBlocksDiffCounters.size() - 1 && networkStats.getDiffForTime().get(maxBlocksDiffCounter.getPeriod()) > 0) {
+                    // reset MAP
+                    networkStats.getDiffForTime().clear();
+                    // recreate 'maxBlocksDiffCounters'
+                    this.maxBlocksDiffCounters = createMaxBlocksDiffCounters(config.getMaxBlocksDiffPeriods());
                 }
+            } else {
+                networkStats.getDiffForTime().putIfAbsent(maxBlocksDiffCounter.getPeriod(), currentMaxBlocksDiff);
             }
         }
         lastStats.set(networkStats);

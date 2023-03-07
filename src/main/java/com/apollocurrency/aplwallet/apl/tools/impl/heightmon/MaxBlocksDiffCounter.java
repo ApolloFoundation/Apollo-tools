@@ -33,18 +33,18 @@ public class MaxBlocksDiffCounter {
     public int update(int index, int currentBlockDiff) {
         int result = -1;
         LocalDateTime currentTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.systemDefault());
-        log.debug("period = [{}], createdDateTime = '{}', currentTime = '{}' > ? {}",
-            period, createdDateTime, currentTime, (currentTime.isAfter(this.createdDateTime)));
+        LocalDateTime currentTime2 = LocalDateTime.now();
+        log.trace("period = [{}], createdDateTime = '{}', currentTime = '{}' / {} > ? {}",
+            period, createdDateTime, currentTime, currentTime2, (currentTime.isAfter(this.createdDateTime)));
         if (currentTime.isAfter(this.createdDateTime)) {
-//            value = Math.max(value, currentBlockDiff);
             result = this.value;
             if (index == 0) {
-                this.value = currentBlockDiff;
+                this.value = currentBlockDiff; // always assign new value to zero item
             } else {
-                this.value = Math.max(value, currentBlockDiff);
+                this.value = Math.max(value, currentBlockDiff); // assign max value to the rest of items
             }
         }
-        log.info("MAX Blocks diff for last {}h is {} blocks {}", period, this.value, result != -1 ? "*" : "");
+        log.info("MAX Blocks diff for last {} minutes is '{}' blocks {}", period, result, result != -1 ? "*" : "");
         return result;
     }
 
