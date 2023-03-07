@@ -42,7 +42,7 @@ public class MaxBlocksDiffCounter {
                 this.value = Math.max(value, currentBlockDiff); // assign max value to the rest of items
             }
         }
-        log.info("MAX Blocks diff for last {} minutes is '{}' blocks {}", period, result, result != -1 ? "*" : "");
+        log.info("MAX Blocks diff for last {} hours is '{}' blocks {}", period, result, result != -1 ? "*" : "");
         return result;
     }
 

@@ -133,7 +133,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
         lastStats.set(networkStats);
         log.info("=========================================== : finished in {} sec", (System.currentTimeMillis() - start) / 1_000);
-        log.debug("DUMP = {}", networkStats.getDiffForTime());
+        log.trace("DUMP = {}", networkStats.getDiffForTime());
         return networkStats;
     }
 
