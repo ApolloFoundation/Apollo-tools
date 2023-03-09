@@ -30,6 +30,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
     private HeightMonitorConfig config;
     private FetchHostResultService fetchHostResultService; // service to fetch response from hosts
     private boolean skipNotRespondingHost; // skip from processing and showing 'not live' hosts in final result
+    private int criticalLevel;
 
     public void init() {
         log.debug("Init HeightMonitorService...");
@@ -42,6 +43,7 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         this.maxBlocksDiffCounters = createMaxBlocksDiffCounters(config.getMaxBlocksDiffPeriods() == null ? DEFAULT_PERIODS : config.getMaxBlocksDiffPeriods());
         this.config.setMaxBlocksDiffPeriods(config.getMaxBlocksDiffPeriods() == null ? DEFAULT_PERIODS : config.getMaxBlocksDiffPeriods());
         this.skipNotRespondingHost = this.config.getPeersConfig().isSkipNotRespondingHost();
+        this.criticalLevel = this.getConfig().getPeersConfig().getCriticalLevel();
         init();
     }
 
@@ -93,9 +95,24 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
                     this.fetchHostResultService.getPeerApiUrls().get(j));
                 int lastHeight = targetMonitoringResult.getHeight();
                 int blocksDiff1 = getBlockDiff(lastMutualBlock, lastHeight);
+                if ( Math.abs(blocksDiff1) > this.criticalLevel) {
+                    // check and set 'isDownloading'
+                    targetMonitoringResult.setDownloading(true);
+                } else {
+                    // not all comparisons are suitable
+                    targetMonitoringResult.setDownloading(false);
+                }
                 int blocksDiff2 = getBlockDiff(lastMutualBlock, comparedMonitoringResult.getHeight());
+                if ( Math.abs(blocksDiff2) > this.criticalLevel) {
+                    // check and set 'isDownloading'
+                    comparedMonitoringResult.setDownloading(true);
+                } else {
+                    // not all comparisons are suitable
+                    comparedMonitoringResult.setDownloading(false);
+                }
                 int milestoneHeight = getMilestoneHeight(lastMutualBlock);
-                String shardsStatus = getShardsStatus(targetMonitoringResult, comparedMonitoringResult);
+                String shardsStatus = getShardsStatus(
+                    targetMonitoringResult, comparedMonitoringResult, blocksDiff1, blocksDiff2, this.criticalLevel);
                 String shard1 = getShardOrNothing(targetMonitoringResult);
                 String shard2 = getShardOrNothing(comparedMonitoringResult);
                 if (!targetMonitoringResult.isDownloading()) {
@@ -156,7 +173,11 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
         }
     }
 
-    private String getShardsStatus(PeerMonitoringResult targetMonitoringResult, PeerMonitoringResult comparedMonitoringResult) {
+    private String getShardsStatus(PeerMonitoringResult targetMonitoringResult,
+                                   PeerMonitoringResult comparedMonitoringResult,
+                                   int blocksDiff1,
+                                   int blocksDiff2,
+                                   int criticalValue) {
         if (!targetMonitoringResult.isLiveHost()) {
             return "peer1=OFF-LINE?";
         }
@@ -187,8 +208,8 @@ public class HeightMonitorServiceImpl implements HeightMonitorService {
             comparedCounter--;
         }
         log.trace("Trg = {}", targetMonitoringResult);
-        if (targetMonitoringResult.isDownloading()) {
-            status.append("/DOWNLOADING");
+        if (targetMonitoringResult.isDownloading() || (blocksDiff1 > criticalValue || blocksDiff2 > criticalValue)) {
+            status.append("/DOWNLOAD");
         }
         return status.toString();
     }

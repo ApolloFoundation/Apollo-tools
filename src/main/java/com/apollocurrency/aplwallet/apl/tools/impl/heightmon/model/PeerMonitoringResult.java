@@ -82,6 +82,10 @@ public class PeerMonitoringResult {
         return isDownloading;
     }
 
+    public void setDownloading(boolean downloading) {
+        isDownloading = downloading;
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("PeerMonitoringResult{");
