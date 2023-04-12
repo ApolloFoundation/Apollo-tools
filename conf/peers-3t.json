@@ -3,6 +3,7 @@
   "warningLevel" : 720,
   "criticalLevel" : 2000,
   "skipNotRespondingHost" : false,
+  "jettyServerPort" : 8273,
   "peersInfo": [
     {"host": "51.15.250.32" },
     {"host": "51.15.253.171"},

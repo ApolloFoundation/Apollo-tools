@@ -71,7 +71,7 @@ jdk_version() {
   local result
   local IFS=$'\n'
   # remove \r for Cygwin
-  local lines=$("$JAVA_CMD" -Xms32M -Xmx32M -version 2>&1 | tr '\r' '\n')
+  local lines=$("$JAVA_CMD" -Xms32M -Xmx32M -XX:+PrintConcurrentLocks -version 2>&1 | tr '\r' '\n')
   if [[ -z $JAVA_CMD ]]
   then
     result=no_java

@@ -23,6 +23,7 @@ public class HeightMonitor {
     private ScheduledExecutorService executor;
     private int delay;
     private AplContainer container;
+    private JettyServer jettyServer;
 
     public HeightMonitor(Integer delay) {
         this.executor = Executors.newScheduledThreadPool(1);
@@ -45,6 +46,8 @@ public class HeightMonitor {
             CDI.current().select(JettyServer.class).get();
             Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
             service.setUp(config);
+            this.jettyServer = new JettyServer(service);
+            this.jettyServer.start();
             executor.scheduleWithFixedDelay(()->{
                 try {
                     service.updateStats();
@@ -60,6 +63,7 @@ public class HeightMonitor {
     public void stop() {
         try {
             executor.shutdown();
+            this.jettyServer.shutdown();
 //            container.shutdown();
         } catch (Exception e) {
             throw new RuntimeException(e);

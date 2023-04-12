@@ -8,9 +8,7 @@ package com.apollocurrency.aplwallet.apl.tools.impl.heightmon;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Slf4j
 public class MaxBlocksDiffCounter {
@@ -22,8 +20,7 @@ public class MaxBlocksDiffCounter {
 
     public MaxBlocksDiffCounter(int period) {
         this.period = period;
-        this.durationOnPeriod = Duration.ofHours(period);
-//        this.durationOnPeriod = Duration.ofMinutes(period);
+        this.durationOnPeriod = Duration.ofMinutes(period);
         this.createdDateTime = LocalDateTime.now()
                 .plus(this.durationOnPeriod);
         log.debug("Created for date-time : {}", this.createdDateTime);
@@ -42,7 +39,7 @@ public class MaxBlocksDiffCounter {
                 this.value = Math.max(value, currentBlockDiff); // assign max value to the rest of items
             }
         }
-        log.info("MAX Blocks diff for last {} hours is '{}' blocks {}", period, result, result != -1 ? "*" : "");
+        log.info("MAX Blocks diff for last {} hours is '{}' blocks {}", period / 60, result, result != -1 ? "*" : "");
         return result;
     }
 

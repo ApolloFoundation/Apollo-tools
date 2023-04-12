@@ -24,7 +24,10 @@ import java.util.concurrent.atomic.AtomicReference;
 @Singleton
 @NoArgsConstructor
 public class HeightMonitorServiceImpl implements HeightMonitorService {
-    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 3, 4, 5, 6, 8, 10, 12);
+    /**
+     * Period value is specified in MINUTES !!
+     */
+    private static final List<Integer> DEFAULT_PERIODS = List.of(0, 1, 2, 4, 8, 10, 20, 40, 60, 80, 120);
     private final AtomicReference<NetworkStats> lastStats = new AtomicReference<>(new NetworkStats(DEFAULT_PERIODS.size()));
     private List<MaxBlocksDiffCounter> maxBlocksDiffCounters;
     private HeightMonitorConfig config;
