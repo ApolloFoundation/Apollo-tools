@@ -4,6 +4,8 @@
 
 package com.apollocurrency.aplwallet.apl.tools.impl.heightmon.web;
 
+import com.apollocurrency.aplwallet.apl.tools.impl.heightmon.HeightMonitorService;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -15,17 +17,19 @@ import org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher;
 import org.jboss.weld.environment.servlet.Listener;
 import org.jboss.weld.module.web.servlet.WeldInitialListener;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import jakarta.inject.Singleton;
+import java.util.Objects;
 
 @Slf4j
-@Singleton
+@NoArgsConstructor
 public class JettyServer {
     private Server server;
     public static final String rootPathSpec = "/rest/*";
 
-    public JettyServer() {
+    private HeightMonitorService heightMonitorService;
+
+    public JettyServer(HeightMonitorService heightMonitorService) {
+        Objects.requireNonNull(heightMonitorService, "heightMonitorService is NULL");
+        this.heightMonitorService = heightMonitorService;
         server = new Server();
         HttpConfiguration configuration = new HttpConfiguration();
         configuration.setSendDateHeader(false);
@@ -33,7 +37,7 @@ public class JettyServer {
         HttpConnectionFactory httpConnectionFactory = new HttpConnectionFactory(configuration);
 
         ServerConnector connector = new ServerConnector(server, httpConnectionFactory);
-        connector.setPort(7872);
+        connector.setPort(this.heightMonitorService.getConfig().getPeersConfig().getJettyServerPort());
         connector.setHost("0.0.0.0");
         connector.setReuseAddress(true);
         server.addConnector(connector);
@@ -57,7 +61,6 @@ public class JettyServer {
         server.setHandler(servletHandler);
     }
 
-    @PostConstruct
     public void start() {
         try {
             server.start();
@@ -66,7 +69,6 @@ public class JettyServer {
         }
     }
 
-    @PreDestroy
     public void shutdown() {
         try {
             server.stop();
