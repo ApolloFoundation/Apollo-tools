@@ -56,7 +56,7 @@ The configuration files used are in conf folder, see: peers.json, peers-1t.json,
   #### Example
   __Encrypt Update Package URL (first iteration)__
 
-  Encrypting the following URL `https://s3.org/ApolloUpdate-1.51.0-Linux.jar` for Updater
+  Encrypting the following URL `https://s3.org/ApolloUpdate-1.51.2-Linux.jar` for Updater
   * Build the Apollo-tools project (alternatively you may use binary distributions to avoid build from sources)
   ```console
   mvn clean install 
